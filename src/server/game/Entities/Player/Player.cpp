@@ -16681,7 +16681,7 @@ void Player::SendQuestUpdate(uint32 questId)
     PhasingHandler::OnConditionChange(this);
 }
 
-QuestGiverStatus Player::GetQuestDialogStatus(Object* questgiver)
+QuestGiverStatus Player::GetQuestDialogStatus(Object const* questgiver) const
 {
     QuestRelationResult qr, qir;
 
