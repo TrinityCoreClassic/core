@@ -410,7 +410,7 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPackets::Quest::Quest
                 {
                     //For AutoSubmition was added plr case there as it almost same exclute AI script cases.
                     // Send next quest
-                    if (Quest const* nextQuest = _player->GetNextQuest(packet.QuestGiverGUID, quest))
+                    if (Quest const* nextQuest = _player->GetNextQuest(object, quest))
                     {
                         // Only send the quest to the player if the conditions are met
                         if (_player->CanTakeQuest(nextQuest, false))
@@ -431,7 +431,7 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPackets::Quest::Quest
                 {
                     GameObject* questGiver = object->ToGameObject();
                     // Send next quest
-                    if (Quest const* nextQuest = _player->GetNextQuest(packet.QuestGiverGUID, quest))
+                    if (Quest const* nextQuest = _player->GetNextQuest(object, quest))
                     {
                         // Only send the quest to the player if the conditions are met
                         if (_player->CanTakeQuest(nextQuest, false))
