@@ -5148,6 +5148,20 @@ struct SpellXSpellVisualLoadInfo
     }
 };
 
+struct StableSlotPricesLoadInfo
+{
+    static DB2LoadInfo const* Instance()
+    {
+        static constexpr DB2FieldMeta fields[] =
+        {
+            { false, FT_INT, "ID" },
+            { false, FT_SHORT, "Cost" },
+        };
+        static DB2LoadInfo const loadInfo(&fields[0], std::size(fields), StableSlotPricesMeta::Instance(), HOTFIX_SEL_STABLE_SLOT_PRICES);
+        return &loadInfo;
+    }
+};
+
 struct SummonPropertiesLoadInfo
 {
     static DB2LoadInfo const* Instance()

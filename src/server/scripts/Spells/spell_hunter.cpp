@@ -76,7 +76,8 @@ enum HunterSpells
     SPELL_HUNTER_WYVERN_STING_DOT_R3 = 24135,
     SPELL_HUNTER_WYVERN_STING_DOT_R4 = 27069,
     SPELL_HUNTER_WYVERN_STING_DOT_R5 = 49009,
-    SPELL_HUNTER_WYVERN_STING_DOT_R6 = 49010
+    SPELL_HUNTER_WYVERN_STING_DOT_R6 = 49010,
+    SPELL_HUNTER_TAME_BEAST_TAME = 13481
 };
 
 enum HunterSpellIcons
@@ -1375,6 +1376,48 @@ class spell_hun_wyvern_sting : public AuraScript
     }
 };
 
+// 13535 - Tame beast
+class spell_hun_tame_beast_trigger : public SpellScript
+{
+    PrepareSpellScript(spell_hun_tame_beast_trigger);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+            {
+                SPELL_HUNTER_TAME_BEAST_TAME
+            });
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        // in classic, this is actually triggered by the pet about to be tamed, so find the player based on the tame beast aura.
+        Unit* caster = GetCaster();
+        if (Aura* tameAura = caster->GetAura(1515))
+        {
+            if (Unit* tameCaster = tameAura->GetCaster())
+            {
+                if (!tameCaster->IsPlayer())
+                    return;
+
+                if (tameCaster->m_unitData->ChannelObjects.size() > 0)
+                {
+                    ObjectGuid const channelGuid = tameCaster->m_unitData->ChannelObjects[0];
+                    if (channelGuid == caster->GetGUID())
+                    {
+                        tameCaster->CastSpell(caster, SPELL_HUNTER_TAME_BEAST_TAME, true);
+                    }
+                }
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_hun_tame_beast_trigger::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
 void AddSC_hunter_spell_scripts()
 {
     RegisterSpellScript(spell_hun_aspect_of_the_beast);
@@ -1385,6 +1428,10 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_tame_beast);
     RegisterSpellScript(spell_hun_target_only_pet_and_owner);
     RegisterSpellScript(spell_hun_wyvern_sting);
+
+    if constexpr (CURRENT_EXPANSION == EXPANSION_CLASSIC) {
+        RegisterSpellScript(spell_hun_tame_beast_trigger);
+    }
 
     if constexpr (CURRENT_EXPANSION >= EXPANSION_THE_BURNING_CRUSADE) {
         RegisterSpellScript(spell_hun_ascpect_of_the_viper);

@@ -203,6 +203,7 @@ TC_GAME_API extern DB2Storage<SpellVisualEntry>                     sSpellVisual
 TC_GAME_API extern DB2Storage<SpellVisualEffectNameEntry>           sSpellVisualEffectNameStore;
 TC_GAME_API extern DB2Storage<SpellVisualKitEntry>                  sSpellVisualKitStore;
 TC_GAME_API extern DB2Storage<SpellXSpellVisualEntry>               sSpellXSpellVisualStore;
+TC_GAME_API extern DB2Storage<StableSlotPricesEntry>                sStableSlotPricesStore;
 TC_GAME_API extern DB2Storage<SummonPropertiesEntry>                sSummonPropertiesStore;
 TC_GAME_API extern DB2Storage<TalentEntry>                          sTalentStore;
 TC_GAME_API extern DB2Storage<TalentTabEntry>                       sTalentTabStore;

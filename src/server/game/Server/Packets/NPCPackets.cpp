@@ -241,5 +241,21 @@ void SetPetSlot::Read()
     _worldPacket >> DestSlot;
     _worldPacket >> StableMaster;
 }
+
+void WorldPackets::NPC::StablePet::Read()
+{
+    _worldPacket >> NpcGUID;
+}
+
+void WorldPackets::NPC::UnstablePet::Read()
+{
+    _worldPacket >> NpcGUID;
+    _worldPacket >> PetNumber;
+}
+
+void WorldPackets::NPC::BuyStableSlot::Read()
+{
+    _worldPacket >> NpcGUID;
+}
 }
 }

@@ -11156,6 +11156,30 @@ LOCK TABLES `spell_x_spell_visual` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `stable_slot_prices`
+--
+
+DROP TABLE IF EXISTS `stable_slot_prices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stable_slot_prices` (
+  `ID` int(10) unsigned NOT NULL DEFAULT '0',
+  `ID` int(10) unsigned NOT NULL DEFAULT '0',
+  `VerifiedBuild` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`ID`,`VerifiedBuild`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `stable_slot_prices`
+--
+
+LOCK TABLES `stable_slot_prices` WRITE;
+/*!40000 ALTER TABLE `stable_slot_prices` DISABLE KEYS */;
+/*!40000 ALTER TABLE `stable_slot_prices` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `summon_properties`
 --
 

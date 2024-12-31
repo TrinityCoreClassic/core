@@ -1334,6 +1334,11 @@ void HotfixDatabaseConnection::DoPrepareStatements()
         " FROM spell_x_spell_visual WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);
     PREPARE_MAX_ID_STMT(HOTFIX_SEL_SPELL_X_SPELL_VISUAL, "SELECT MAX(ID) + 1 FROM spell_x_spell_visual", CONNECTION_SYNCH);
 
+    // StableSlotPrices.m2
+    PrepareStatement(HOTFIX_SEL_STABLE_SLOT_PRICES, "SELECT ID, Cost FROM stable_slot_prices"
+        " WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);
+    PREPARE_MAX_ID_STMT(HOTFIX_SEL_STABLE_SLOT_PRICES, "SELECT MAX(ID) + 1 FROM stable_slot_prices", CONNECTION_SYNCH);
+
     // SummonProperties.db2
     PrepareStatement(HOTFIX_SEL_SUMMON_PROPERTIES, "SELECT ID, Control, Faction, Title, Slot, Flags1, Flags2 FROM summon_properties"
         " WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);

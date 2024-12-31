@@ -3354,6 +3354,12 @@ struct SpellXSpellVisualEntry
     uint32 SpellID;
 };
 
+struct StableSlotPricesEntry
+{
+    uint32 ID;
+    uint16 Cost;
+};
+
 struct SummonPropertiesEntry
 {
     uint32 ID;

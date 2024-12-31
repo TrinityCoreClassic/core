@@ -281,6 +281,37 @@ namespace WorldPackets
             uint32 PetNumber = 0;
             uint8 DestSlot = 0;
         };
+
+        class StablePet final : public ClientPacket
+        {
+        public:
+            StablePet(WorldPacket&& packet) : ClientPacket(CMSG_STABLE_PET, std::move(packet)) {}
+
+            void Read() override;
+
+            ObjectGuid NpcGUID;
+        };
+
+        class UnstablePet final : public ClientPacket
+        {
+        public:
+            UnstablePet(WorldPacket&& packet) : ClientPacket(CMSG_UNSTABLE_PET, std::move(packet)) {}
+
+            void Read() override;
+
+            ObjectGuid NpcGUID;
+            uint32 PetNumber = 0;
+        };
+
+        class BuyStableSlot final : public ClientPacket
+        {
+        public:
+            BuyStableSlot(WorldPacket&& packet) : ClientPacket(CMSG_BUY_STABLE_SLOT, std::move(packet)) {}
+
+            void Read() override;
+
+            ObjectGuid NpcGUID;
+        };
     }
 }
 

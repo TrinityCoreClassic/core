@@ -370,6 +370,8 @@ void WorldSession::SendStablePet(ObjectGuid guid)
         return;
     }
 
+    packet.NumStableSlots = petStable->MaxStabledPets;
+
     for (uint32 petSlot = 0; petSlot < petStable->ActivePets.size(); ++petSlot)
     {
         if (!petStable->ActivePets[petSlot])
@@ -556,6 +558,140 @@ void WorldSession::HandleSetPetSlot(WorldPackets::NPC::SetPetSlot& setPetSlot)
             }
         }
     });
+}
+
+//TODOFROST - confirm stable works,
+
+void WorldSession::HandleStablePet(WorldPackets::NPC::StablePet& packet)
+{
+    if (!GetPlayer()->IsAlive())
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    if (!CheckStableMaster(packet.NpcGUID))
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    PetStable* petStable = GetPlayer()->GetPetStable();
+    if (!petStable)
+    {
+        return;
+    }
+
+    Pet* pet = _player->GetPet();
+
+    // can't place in stable dead pet
+    if (!pet || !pet->IsAlive() || pet->getPetType() != HUNTER_PET)
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    for (uint32 freeSlot = 0; freeSlot < petStable->MaxStabledPets; ++freeSlot)
+    {
+        if (!petStable->StabledPets[freeSlot])
+        {
+            _player->RemovePet(pet, PetSaveMode(PET_SAVE_FIRST_STABLE_SLOT + freeSlot));
+            auto index = petStable->GetCurrentActivePetIndex();
+            if (index)
+            {
+                std::swap(petStable->StabledPets[freeSlot], petStable->ActivePets[*index]);
+            }
+            
+            SendPetStableResult(StableResult::StableSuccess);
+        }
+    }
+
+    SendPetStableResult(StableResult::InternalError);
+}
+
+void WorldSession::HandleUnstablePet(WorldPackets::NPC::UnstablePet& packet)
+{
+    if (!CheckStableMaster(packet.NpcGUID))
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    PetStable* petStable = GetPlayer()->GetPetStable();
+    if (!petStable)
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    auto stabledPet = std::find_if(petStable->StabledPets.begin(), petStable->StabledPets.end(), [&packet](Optional<PetStable::PetInfo> const& pet)
+        {
+            return pet && pet->PetNumber == packet.PetNumber;
+        });
+
+    if (stabledPet == petStable->StabledPets.end())
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate((*stabledPet)->CreatureId);
+    if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
+    {
+        // if problem in exotic pet
+        if (creatureInfo && creatureInfo->IsTameable(true))
+            SendPetStableResult(StableResult::CantControlExotic);
+        else
+            SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    Pet* oldPet = _player->GetPet();
+    if (oldPet)
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    Pet* newPet = new Pet(_player, HUNTER_PET);
+
+    if (!newPet->LoadPetFromDB(_player, 0, packet.PetNumber, false))
+    {
+        delete newPet;
+        newPet = nullptr;
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    SendPetStableResult(StableResult::UnstableSuccess);
+}
+
+void WorldSession::HandleBuyStableSlot(WorldPackets::NPC::BuyStableSlot& packet)
+{
+    if (!CheckStableMaster(packet.NpcGUID))
+    {
+        SendPetStableResult(StableResult::InternalError);
+        return;
+    }
+
+    PetStable& petStable = GetPlayer()->GetOrInitPetStable();
+
+    if (petStable.MaxStabledPets < MAX_PET_STABLES)
+    {
+        StableSlotPricesEntry const* SlotPrice = sStableSlotPricesStore.LookupEntry(petStable.MaxStabledPets + 1);
+
+        if (GetPlayer()->HasEnoughMoney(static_cast<uint64>(SlotPrice->Cost)))
+        {
+            ++petStable.MaxStabledPets;
+            _player->ModifyMoney(-int64(SlotPrice->Cost));
+            SendPetStableResult(StableResult::BuySlotSuccess);
+        }
+        else
+            SendPetStableResult(StableResult::NotEnoughMoney);
+    }
+    else
+        SendPetStableResult(StableResult::InternalError);
+    
 }
 
 void WorldSession::HandleRepairItemOpcode(WorldPackets::Item::RepairItem& packet)

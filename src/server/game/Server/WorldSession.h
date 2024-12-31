@@ -522,6 +522,9 @@ namespace WorldPackets
         class TrainerBuySpell;
         class RequestStabledPets;
         class SetPetSlot;
+        class StablePet;
+        class UnstablePet;
+        class BuyStableSlot;
     }
 
     namespace Party
@@ -1378,6 +1381,9 @@ class TC_GAME_API WorldSession
         void HandleBinderActivateOpcode(WorldPackets::NPC::Hello& packet);
         void HandleRequestStabledPets(WorldPackets::NPC::RequestStabledPets& packet);
         void HandleSetPetSlot(WorldPackets::NPC::SetPetSlot& setPetSlot);
+        void HandleStablePet(WorldPackets::NPC::StablePet& packet);
+        void HandleUnstablePet(WorldPackets::NPC::UnstablePet& packet);
+        void HandleBuyStableSlot(WorldPackets::NPC::BuyStableSlot& packet);
 
         void HandleCanDuel(WorldPackets::Duel::CanDuel& packet);
         void HandleDuelResponseOpcode(WorldPackets::Duel::DuelResponse& duelResponse);

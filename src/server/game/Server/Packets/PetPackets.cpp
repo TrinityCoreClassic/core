@@ -56,8 +56,8 @@ WorldPacket const* WorldPackets::Pet::PetSpells::Write()
 WorldPacket const* WorldPackets::Pet::PetStableList::Write()
 {
     _worldPacket << StableMaster;
-
     _worldPacket << uint32(Pets.size());
+    _worldPacket << uint8(NumStableSlots);
     for (PetStableInfo const& pet : Pets)
     {
         _worldPacket << int32(pet.PetSlot);
