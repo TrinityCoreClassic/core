@@ -1363,7 +1363,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, CreateObjectBits flags, Playe
 
         bool HasSceneInstanceIDs = !player->GetSceneMgr().GetSceneTemplateByInstanceMap().empty();
         bool HasRuneState = ToUnit()->GetPowerIndex(POWER_RUNES) != MAX_POWERS;
-        bool HasActionButtons = player->IsLoading(); // ActionButtons in MovementUpdate is only sent on login
+        bool HasActionButtons = true; // action buttons need to be send for map changes, as well as login.
 
         data->WriteBit(HasSceneInstanceIDs);
         data->WriteBit(HasRuneState);
