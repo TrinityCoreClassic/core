@@ -88,6 +88,9 @@ void Pet::AddToWorld()
         GetCharmInfo()->SetIsFollowing(false);
         GetCharmInfo()->SetIsReturning(false);
     }
+
+    if (m_owner)
+        m_owner->ForceUpdateFieldChange(m_owner->m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::Summon));
 }
 
 void Pet::RemoveFromWorld()
