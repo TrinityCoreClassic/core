@@ -5256,6 +5256,10 @@ void Spell::TakePower()
         }
 
         unitCaster->ModifyPower(powerType, -cost.Amount);
+
+        // Set the five second timer
+        if (powerType == POWER_MANA && cost.Amount > 0)
+            unitCaster->SetLastManaUse(GameTime::GetGameTimeMS());
     }
 }
 
