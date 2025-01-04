@@ -1087,9 +1087,9 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
         pCurrChar->SetGuildLevel(0);
     }
 
-    // Send stable contents to display icons on Call Pet spells
-    if (pCurrChar->HasSpell(CALL_PET_SPELL_ID))
-        SendStablePet(ObjectGuid::Empty);
+    //// Send stable contents to display icons on Call Pet spells
+    //if (pCurrChar->HasSpell(CALL_PET_SPELL_ID))
+    //    SendStablePet(ObjectGuid::Empty);
 
     pCurrChar->GetSession()->GetBattlePetMgr()->SendJournalLockStatus();
 

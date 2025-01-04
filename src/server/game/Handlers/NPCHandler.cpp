@@ -384,6 +384,7 @@ void WorldSession::SendStablePet(ObjectGuid guid)
         stableEntry.CreatureID = pet.CreatureId;
         stableEntry.DisplayID = pet.DisplayId;
         stableEntry.ExperienceLevel = pet.Level;
+        stableEntry.Loyalty = 0; //TODOFROST
         stableEntry.PetFlags = PET_STABLE_ACTIVE;
         stableEntry.PetName = pet.Name;
     }
@@ -400,6 +401,7 @@ void WorldSession::SendStablePet(ObjectGuid guid)
         stableEntry.CreatureID = pet.CreatureId;
         stableEntry.DisplayID = pet.DisplayId;
         stableEntry.ExperienceLevel = pet.Level;
+        stableEntry.Loyalty = 0; //TODOFROST
         stableEntry.PetFlags = PET_STABLE_INACTIVE;
         stableEntry.PetName = pet.Name;
     }

@@ -3065,7 +3065,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void _LoadGlyphs(PreparedQueryResult result);
         void _LoadTalents(PreparedQueryResult result);
         void _LoadInstanceTimeRestrictions(PreparedQueryResult result);
-        void _LoadPetStable(uint32 summonedPetNumber, PreparedQueryResult result);
+        void _LoadPetStable(uint32 summonedPetNumber, uint8 petStableSlots, PreparedQueryResult result);
         void _LoadCurrency(PreparedQueryResult result);
         void _LoadCUFProfiles(PreparedQueryResult result);
 
