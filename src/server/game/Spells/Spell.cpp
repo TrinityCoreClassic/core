@@ -6208,7 +6208,7 @@ SpellCastResult Spell::CheckCast(bool strict, int32* param1 /*= nullptr*/, int32
                     Optional<PetSaveMode> petSlot;
                     if (!spellEffectInfo.MiscValue)
                     {
-                        petSlot = PetSaveMode(spellEffectInfo.CalcValue());
+                        //petSlot = PetSaveMode(spellEffectInfo.CalcValue());
 
                         // No pet can be summoned if any pet is dead
                         for (Optional<PetStable::PetInfo> const& activePet : playerCaster->GetPetStable()->ActivePets)

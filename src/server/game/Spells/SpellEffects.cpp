@@ -2647,8 +2647,8 @@ void Spell::EffectSummonPet()
     }
 
     Optional<PetSaveMode> petSlot;
-    if (!petentry)
-        petSlot = PetSaveMode(damage);
+    //if (!petentry)
+    //    petSlot = PetSaveMode(damage);
 
     float x, y, z;
     owner->GetClosePoint(x, y, z, owner->GetCombatReach());
