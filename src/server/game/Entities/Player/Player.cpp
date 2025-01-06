@@ -28315,8 +28315,8 @@ void Player::_LoadPetStable(uint32 summonedPetNumber, uint8 petStableSlots, Prep
         m_petStable->MaxStabledPets = MAX_PET_STABLES;
     }
 
-    //         0      1        2      3    4           5     6     7        8          9       10      11        12              13       14              15
-    // SELECT id, entry, modelid, level, exp, Reactstate, slot, name, renamed, curhealth, curmana, abdata, savetime, CreatedBySpell, PetType, specialization FROM character_pet WHERE owner = ?
+    //         0      1        2      3    4           5              6        7               8     9     10      11        12        13            14      15        16              17       18              19
+    // SELECT id, entry, modelid, level, exp, Reactstate, LoyaltyPoints, Loyalty, TrainingPoints, slot, name, renamed, curhealth, curmana, curhappiness, abdata, savetime, CreatedBySpell, PetType, specialization FROM character_pet WHERE owner = ?
     if (result)
     {
         do
@@ -28329,16 +28329,20 @@ void Player::_LoadPetStable(uint32 summonedPetNumber, uint8 petStableSlots, Prep
             petInfo.Level = fields[3].GetUInt16();
             petInfo.Experience = fields[4].GetUInt32();
             petInfo.ReactState = ReactStates(fields[5].GetUInt8());
-            PetSaveMode slot = PetSaveMode(fields[6].GetInt16());
-            petInfo.Name = fields[7].GetString();
-            petInfo.WasRenamed = fields[8].GetBool();
-            petInfo.Health = fields[9].GetUInt32();
-            petInfo.Mana = fields[10].GetUInt32();
-            petInfo.ActionBar = fields[11].GetString();
-            petInfo.LastSaveTime = fields[12].GetUInt32();
-            petInfo.CreatedBySpellId = fields[13].GetUInt32();
-            petInfo.Type = PetType(fields[14].GetUInt8());
-            petInfo.SpecializationId = fields[15].GetUInt16();
+            petInfo.LoyaltyPoints = fields[6].GetInt32();
+            petInfo.Loyalty = fields[7].GetUInt32();
+            petInfo.TrainingPoints = fields[8].GetInt32();
+            PetSaveMode slot = PetSaveMode(fields[9].GetInt16());
+            petInfo.Name = fields[10].GetString();
+            petInfo.WasRenamed = fields[11].GetBool();
+            petInfo.Health = fields[12].GetUInt32();
+            petInfo.Mana = fields[13].GetUInt32();
+            petInfo.Happiness = fields[14].GetUInt32();
+            petInfo.ActionBar = fields[15].GetString();
+            petInfo.LastSaveTime = fields[16].GetUInt32();
+            petInfo.CreatedBySpellId = fields[17].GetUInt32();
+            petInfo.Type = PetType(fields[18].GetUInt8());
+            petInfo.SpecializationId = fields[19].GetUInt16();
             if (slot >= PET_SAVE_FIRST_ACTIVE_SLOT && slot < PET_SAVE_LAST_ACTIVE_SLOT)
                 m_petStable->ActivePets[slot] = std::move(petInfo);
             else if (slot >= PET_SAVE_FIRST_STABLE_SLOT && slot < PET_SAVE_LAST_STABLE_SLOT)

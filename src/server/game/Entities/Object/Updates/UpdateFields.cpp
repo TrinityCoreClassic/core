@@ -385,7 +385,7 @@ namespace UF
         writer.Write(MaxDamage, Compat::UpdateFieldFlag::Private | Compat::UpdateFieldFlag::Owner | Compat::UpdateFieldFlag::SpecialInfo);
         writer.Write(MinOffHandDamage, Compat::UpdateFieldFlag::Private | Compat::UpdateFieldFlag::Owner | Compat::UpdateFieldFlag::SpecialInfo);
         writer.Write(MaxOffHandDamage, Compat::UpdateFieldFlag::Private | Compat::UpdateFieldFlag::Owner | Compat::UpdateFieldFlag::SpecialInfo);
-        writer.WriteBlock(StandState, PetTalentPoints, VisFlags, AnimTier, Compat::UpdateFieldFlag::Public);
+        writer.WriteBlock(StandState, PetLoyaltyIndex, VisFlags, AnimTier, Compat::UpdateFieldFlag::Public);
         writer.Write(PetNumber, Compat::UpdateFieldFlag::Public);
         writer.Write(PetNameTimestamp, Compat::UpdateFieldFlag::Public);
         writer.Write(PetExperience, Compat::UpdateFieldFlag::Owner);
@@ -505,7 +505,7 @@ namespace UF
         Base::ClearChangesMask(MinOffHandDamage);
         Base::ClearChangesMask(MaxOffHandDamage);
         Base::ClearChangesMask(StandState);
-        Base::ClearChangesMask(PetTalentPoints);
+        Base::ClearChangesMask(PetLoyaltyIndex);
         Base::ClearChangesMask(VisFlags);
         Base::ClearChangesMask(AnimTier);
         Base::ClearChangesMask(PetNumber);

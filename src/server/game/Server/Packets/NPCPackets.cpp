@@ -249,8 +249,8 @@ void WorldPackets::NPC::StablePet::Read()
 
 void WorldPackets::NPC::UnstablePet::Read()
 {
-    _worldPacket >> NpcGUID;
     _worldPacket >> PetNumber;
+    _worldPacket >> NpcGUID;
 }
 
 void WorldPackets::NPC::BuyStableSlot::Read()

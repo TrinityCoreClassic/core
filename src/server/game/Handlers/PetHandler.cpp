@@ -605,6 +605,12 @@ void WorldSession::HandlePetAbandon(WorldPackets::Pet::PetAbandon& packet)
     Creature* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, packet.Pet);
     if (pet && pet->ToPet() && pet->ToPet()->getPetType() == HUNTER_PET)
     {
+        if (pet->GetGUID() == _player->GetPetGUID())
+        {
+            uint32 feelty = pet->GetPower(POWER_HAPPINESS);
+            pet->SetPower(POWER_HAPPINESS, feelty > 50000 ? (feelty - 50000) : 0);
+        }
+
         _player->RemovePet((Pet*)pet, PET_SAVE_AS_DELETED);
     }
 }

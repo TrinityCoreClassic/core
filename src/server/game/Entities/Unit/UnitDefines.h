@@ -89,7 +89,7 @@ enum UnitBytes0Offsets : uint8
 enum UnitBytes1Offsets : uint8
 {
     UNIT_BYTES_1_OFFSET_STAND_STATE = 0,
-    UNIT_BYTES_1_OFFSET_PET_TALENTS = 1,    // unused
+    UNIT_BYTES_1_OFFSET_PET_TALENTS = 1,    // unused (also known as LoyaltyIndex)
     UNIT_BYTES_1_OFFSET_VIS_FLAG = 2,
     UNIT_BYTES_1_OFFSET_ANIM_TIER = 3
 };

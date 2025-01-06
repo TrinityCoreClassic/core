@@ -42,10 +42,31 @@
 
 #define PET_XP_FACTOR 0.05f
 
+ //numbers represent minutes * 100 while happy (you get 100 loyalty points per min while happy)
+uint32 const LevelUpLoyalty[6] =
+{
+    5500,
+    11500,
+    17000,
+    23500,
+    31000,
+    39500,
+};
+
+uint32 const LevelStartLoyalty[6] =
+{
+    2000,
+    4500,
+    7000,
+    10000,
+    13500,
+    17500,
+};
+
 Pet::Pet(Player* owner, PetType type) :
     Guardian(nullptr, owner, true), m_removed(false),
-    m_petType(type), m_duration(0), m_loading(false), m_groupUpdateMask(0),
-    m_petSpecialization(0)
+    m_happinessTimer(7500), m_loyaltyTimer(12000), m_petType(type), m_duration(0),
+    m_loyaltyPoints(0), m_loading(false), m_groupUpdateMask(0), m_petSpecialization(0)
 {
     ASSERT(GetOwner());
 
@@ -292,8 +313,12 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
             SetClass(CLASS_WARRIOR);
             SetGender(GENDER_NONE);
             SetSheath(SHEATH_STATE_MELEE);
+            SetLoyaltyLevel((LoyaltyLevel)petInfo->Loyalty);
             ReplaceAllPetFlags(petInfo->WasRenamed ? UNIT_PET_FLAG_CAN_BE_ABANDONED : (UNIT_PET_FLAG_CAN_BE_RENAMED | UNIT_PET_FLAG_CAN_BE_ABANDONED));
             ReplaceAllUnitFlags(UNIT_FLAG_PLAYER_CONTROLLED); // this enables popup window (pet abandon, cancel)
+            SetTrainingPoints(petInfo->TrainingPoints);
+            SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
+            SetPower(POWER_HAPPINESS, petInfo->Happiness);
             break;
         default:
             if (!IsPetGhoul())
@@ -321,6 +346,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     }
 
     SetReactState(petInfo->ReactState);
+    m_loyaltyPoints = petInfo->LoyaltyPoints;
     SetCanModifyStats(true);
 
     if (getPetType() == SUMMON_PET && !current)              //all (?) summon pets come with full health when called, but not when they are current
@@ -535,16 +561,20 @@ void Pet::SavePetToDB(PetSaveMode mode)
         stmt->setUInt8(4, GetLevel());
         stmt->setUInt32(5, m_unitData->PetExperience);
         stmt->setUInt8(6, GetReactState());
-        stmt->setInt16(7, owner->GetPetStable()->GetCurrentActivePetIndex().value_or(PET_SAVE_NOT_IN_SLOT));
-        stmt->setString(8, m_name);
-        stmt->setUInt8(9, HasPetFlag(UNIT_PET_FLAG_CAN_BE_RENAMED) ? 0 : 1);
-        stmt->setUInt32(10, curhealth);
-        stmt->setUInt32(11, curmana);
-        stmt->setString(12, actionBar);
-        stmt->setUInt32(13, GameTime::GetGameTime());
-        stmt->setUInt32(14, m_unitData->CreatedBySpell);
-        stmt->setUInt8(15, getPetType());
-        stmt->setUInt16(16, GetSpecialization());
+        stmt->setInt32(7, m_loyaltyPoints);
+        stmt->setUInt32(8, GetLoyaltyLevel());
+        stmt->setInt32(9, 0);   //TODOFROST training points
+        stmt->setInt16(10, owner->GetPetStable()->GetCurrentActivePetIndex().value_or(PET_SAVE_NOT_IN_SLOT));
+        stmt->setString(11, m_name);
+        stmt->setUInt8(12, HasPetFlag(UNIT_PET_FLAG_CAN_BE_RENAMED) ? 0 : 1);
+        stmt->setUInt32(13, curhealth);
+        stmt->setUInt32(14, curmana);
+        stmt->setUInt32(15, GetPower(POWER_HAPPINESS));
+        stmt->setString(16, actionBar);
+        stmt->setUInt32(17, GameTime::GetGameTime());
+        stmt->setUInt32(18, m_unitData->CreatedBySpell);
+        stmt->setUInt8(19, getPetType());
+        stmt->setUInt16(20, GetSpecialization());
         trans->Append(stmt);
 
         CharacterDatabase.CommitTransaction(trans);
@@ -565,10 +595,14 @@ void Pet::FillPetInfo(PetStable::PetInfo* petInfo) const
     petInfo->Level = GetLevel();
     petInfo->Experience = m_unitData->PetExperience;
     petInfo->ReactState = GetReactState();
+    petInfo->LoyaltyPoints = m_loyaltyPoints;
+    petInfo->Loyalty = GetLoyaltyLevel();
+    //TODOFROST training points
     petInfo->Name = GetName();
     petInfo->WasRenamed = !HasPetFlag(UNIT_PET_FLAG_CAN_BE_RENAMED);
     petInfo->Health = GetHealth();
     petInfo->Mana = GetPower(POWER_MANA);
+    petInfo->Happiness = GetPower(POWER_HAPPINESS);
     petInfo->ActionBar = GenerateActionBarData();
     petInfo->LastSaveTime = GameTime::GetGameTime();
     petInfo->CreatedBySpellId = m_unitData->CreatedBySpell;
@@ -623,6 +657,10 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
             RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
 
             //SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
+
+            // lose happiness when died and not in BG/Arena
+            if (!GetMap()->IsBattlegroundOrArena())
+                ModifyPower(POWER_HAPPINESS, -HAPPINESS_LEVEL_SIZE);
         }
     }
     else if (getDeathState() == ALIVE)
@@ -716,6 +754,26 @@ void Pet::Update(uint32 diff)
                     }
                 }
             }
+
+            if (getPetType() != HUNTER_PET)
+                break;
+
+            if (m_happinessTimer <= diff)
+            {
+                LoseHappiness();
+                m_happinessTimer = 7500;
+            }
+            else
+                m_happinessTimer -= diff;
+
+            if (m_loyaltyTimer <= diff)
+            {
+                TickLoyaltyChange();
+                m_loyaltyTimer = 12000;
+            }
+            else
+                m_loyaltyTimer -= diff;
+
             break;
         }
         default:
@@ -727,6 +785,116 @@ void Pet::Update(uint32 diff)
 void Pet::Remove(PetSaveMode mode, bool returnreagent)
 {
     GetOwner()->RemovePet(this, mode, returnreagent);
+}
+
+void Pet::LoseHappiness()
+{
+    uint32 curValue = GetPower(POWER_HAPPINESS);
+    if (curValue <= 0)
+        return;
+    int32 addvalue = CURRENT_EXPANSION < EXPANSION_WRATH_OF_THE_LICH_KING ? (140 >> GetLoyaltyLevel()) * 125 : 670;      // value is 70/35/17/8/4 (per min) * 1000 / 8 (timer 7.5 secs)
+    if (IsInCombat())                                       // we know in combat happiness fades faster, multiplier guess
+        addvalue = int32(addvalue * 1.5);
+    ModifyPower(POWER_HAPPINESS, -addvalue);
+}
+
+void Pet::TickLoyaltyChange()
+{
+    int32 addvalue;
+
+    switch (GetHappinessState())
+    {
+    case HAPPY:
+        addvalue = 20;
+        break;
+    case CONTENT:
+        addvalue = 10;
+        break;
+    case UNHAPPY:
+        addvalue = -20;
+        break;
+    default:
+        return;
+    }
+    ModifyLoyalty(addvalue);
+}
+
+void Pet::ModifyLoyalty(int32 addvalue)
+{
+    uint32 loyaltylevel = GetLoyaltyLevel();
+
+    //TODOFROST
+    //if (addvalue > 0)                                       // only gain influenced, not loss
+    //    addvalue = int32((float)addvalue * sWorld.getConfig(CONFIG_FLOAT_RATE_LOYALTY));
+
+
+    if (loyaltylevel >= BEST_FRIEND && (addvalue + m_loyaltyPoints) > int32(GetMaxLoyaltyPoints(loyaltylevel)))
+        return;
+
+    m_loyaltyPoints += addvalue;
+
+    if (m_loyaltyPoints < 0)
+    {
+        if (loyaltylevel > REBELLIOUS)
+        {
+            //level down
+            --loyaltylevel;
+            SetLoyaltyLevel(LoyaltyLevel(loyaltylevel));
+            m_loyaltyPoints = GetStartLoyaltyPoints(loyaltylevel);
+            //SetTrainingPoints(m_TrainingPoints - int32(GetLevel()));  //TODOFROST
+        }
+        else
+        {
+            m_loyaltyPoints = 0;
+            Unit* owner = GetOwner();
+            if (owner && owner->GetTypeId() == TYPEID_PLAYER)
+            {
+                //TODOFROST pet run away
+            }
+        }
+    }
+    //level up
+    else if (m_loyaltyPoints > int32(GetMaxLoyaltyPoints(loyaltylevel)))
+    {
+        ++loyaltylevel;
+        SetLoyaltyLevel(LoyaltyLevel(loyaltylevel));
+        m_loyaltyPoints = GetStartLoyaltyPoints(loyaltylevel);
+        //SetTrainingPoints(m_TrainingPoints + GetLevel()); //TODOFROST
+    }
+}
+
+HappinessState Pet::GetHappinessState()
+{
+    if (GetPower(POWER_HAPPINESS) < HAPPINESS_LEVEL_SIZE)
+        return UNHAPPY;
+    else if (GetPower(POWER_HAPPINESS) >= HAPPINESS_LEVEL_SIZE * 2)
+        return HAPPY;
+    else
+        return CONTENT;
+}
+
+uint32 Pet::GetMaxLoyaltyPoints(uint32 level)
+{
+    if (level < 1) level = 1; // prevent SIGSEGV (out of range)
+    if (level > 6) level = 6; // prevent SIGSEGV (out of range)
+    return LevelUpLoyalty[level - 1];
+}
+
+uint32 Pet::GetStartLoyaltyPoints(uint32 level)
+{
+    if (level < 1) level = 1; // prevent SIGSEGV (out of range)
+    if (level > 6) level = 6; // prevent SIGSEGV (out of range)
+    return LevelStartLoyalty[level - 1];
+}
+
+void Pet::KillLoyaltyBonus(uint32 level)
+{
+    if (level > 100)
+        return;
+
+    //at lower levels gain is faster | the lower loyalty the more loyalty is gained
+    uint32 bonus = uint32(((100 - level) / 10) + (6 - GetLoyaltyLevel()));
+    ModifyLoyalty(bonus);
 }
 
 void Pet::GivePetXP(uint32 xp)
@@ -764,6 +932,9 @@ void Pet::GivePetXP(uint32 xp)
     }
     // Not affected by special conditions - give it new XP
     SetPetExperience(petlevel < maxlevel ? newXP : 0);
+
+    if (getPetType() == HUNTER_PET)
+        KillLoyaltyBonus(petlevel);
 }
 
 void Pet::GivePetLevel(uint8 level)
@@ -779,6 +950,8 @@ void Pet::GivePetLevel(uint8 level)
 
     InitStatsForLevel(level);
     InitLevelupSpellsForLevel();
+
+    //TODOFROST update training points.
 }
 
 bool Pet::CreateBaseAtCreature(Creature* creature)
@@ -811,6 +984,12 @@ bool Pet::CreateBaseAtCreature(Creature* creature)
     else
         SetName(creature->GetNameForLocaleIdx(sObjectMgr->GetDBCLocaleIndex()));
 
+    m_loyaltyPoints = 1000;
+    if (cinfo->type == CREATURE_TYPE_BEAST)
+    {
+        SetLoyaltyLevel(REBELLIOUS);
+    }
+
     return true;
 }
 
@@ -833,6 +1012,8 @@ bool Pet::CreateBaseAtTamed(CreatureTemplate const* cinfo, Map* map)
     if (!Create(map->GenerateLowGuid<HighGuid::Pet>(), map, cinfo->Entry, sObjectMgr->GeneratePetNumber()))
         return false;
 
+    SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
+    SetPower(POWER_HAPPINESS, 166500);
     SetPetNameTimestamp(0);
     SetPetExperience(0);
     SetPetNextLevelExperience(uint32(sObjectMgr->GetXPForLevel(GetLevel() + 1) * PET_XP_FACTOR));
@@ -1914,6 +2095,13 @@ void Pet::RemoveSpecializationSpells(bool clearActionBar)
     }
 
     unlearnSpells(unlearnedSpells, true, clearActionBar);
+}
+
+void Pet::SetTrainingPoints(int32 TP)
+{
+    SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::TrainingPointsTotal), 0);
+    SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::TrainingPointsUsed), 0);
+    //TODOFROST
 }
 
 void Pet::SetSpecialization(uint16 spec)

@@ -58,6 +58,23 @@ constexpr bool IsStabledPetSlot(PetSaveMode slot)
     return slot >= PET_SAVE_FIRST_STABLE_SLOT && slot < PET_SAVE_LAST_STABLE_SLOT;
 }
 
+enum HappinessState
+{
+    UNHAPPY = 1,
+    CONTENT = 2,
+    HAPPY = 3
+};
+
+enum LoyaltyLevel
+{
+    REBELLIOUS = 1,
+    UNRULY = 2,
+    SUBMISSIVE = 3,
+    DEPENDABLE = 4,
+    FAITHFUL = 5,
+    BEST_FRIEND = 6
+};
+
 enum PetSpellState
 {
     PETSPELL_UNCHANGED = 0,
@@ -132,6 +149,10 @@ public:
         uint16 SpecializationId = 0;
         uint8 Level = 0;
         ReactStates ReactState = ReactStates(0);
+        int32 LoyaltyPoints = 0;
+        uint32 Loyalty = 0;
+        int32 TrainingPoints = 0;
+        int32 Happiness = 0;
         PetType Type = MAX_PET_TYPE;
         bool WasRenamed = false;
     };

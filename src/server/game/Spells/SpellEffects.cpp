@@ -2699,6 +2699,7 @@ void Spell::EffectLearnPetSpell()
     if (!learn_spellproto)
         return;
 
+    pet->SetTrainingPoints(0);  //TODOFROST
     pet->learnSpell(learn_spellproto->Id);
     pet->SavePetToDB(PET_SAVE_AS_CURRENT);
     pet->GetOwner()->PetSpellInitialize();

@@ -686,7 +686,7 @@ namespace UF
         Compat::UpdateField<float, UNIT_FIELD_MAXOFFHANDDAMAGE - UNIT_START> MaxOffHandDamage;
 
         Compat::UpdateField<uint8, UNIT_FIELD_BYTES_1 - UNIT_START, 0> StandState;
-        Compat::UpdateField<uint8, UNIT_FIELD_BYTES_1 - UNIT_START, 1> PetTalentPoints;
+        Compat::UpdateField<uint8, UNIT_FIELD_BYTES_1 - UNIT_START, 1> PetLoyaltyIndex;
         Compat::UpdateField<uint8, UNIT_FIELD_BYTES_1 - UNIT_START, 2> VisFlags;
         Compat::UpdateField<uint8, UNIT_FIELD_BYTES_1 - UNIT_START, 3> AnimTier;
 

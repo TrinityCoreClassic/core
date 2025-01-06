@@ -9360,11 +9360,15 @@ void Unit::SetPower(Powers power, int32 val, bool withPowerUpdate /*= true*/)
         if (player->GetGroup())
             player->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_CUR_POWER);
     }
-    /*else if (Pet* pet = ToCreature()->ToPet()) TODO 6.x
+    else if (Pet* pet = ToCreature()->ToPet())
     {
-        if (pet->isControlled())
-            pet->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_POWER);
-    }*/
+        //if (pet->isControlled())
+        //    pet->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_POWER); //TODO
+
+        // Update the pet's character sheet with happiness damage bonus
+        if (pet->getPetType() == HUNTER_PET && power == POWER_HAPPINESS)
+            pet->UpdateDamagePhysical(BASE_ATTACK);
+    }
 }
 
 void Unit::SetMaxPower(Powers power, int32 val)

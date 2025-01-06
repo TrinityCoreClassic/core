@@ -85,6 +85,17 @@ class TC_GAME_API Pet : public Guardian
                 return m_autospells[pos];
         }
 
+        void LoseHappiness();
+        void TickLoyaltyChange();
+        void ModifyLoyalty(int32 addvalue);
+        HappinessState GetHappinessState();
+        uint32 GetMaxLoyaltyPoints(uint32 level);
+        uint32 GetStartLoyaltyPoints(uint32 level);
+        void KillLoyaltyBonus(uint32 level);
+        LoyaltyLevel GetLoyaltyLevel() const { return static_cast<LoyaltyLevel>(*m_unitData->PetLoyaltyIndex); }
+        void SetLoyaltyLevel(LoyaltyLevel level) {
+            SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::PetLoyaltyIndex), level);
+        }
         void GivePetXP(uint32 xp);
         void GivePetLevel(uint8 level);
         void SetPetExperience(uint32 xp) {
@@ -141,6 +152,8 @@ class TC_GAME_API Pet : public Guardian
 
         void InitPetCreateSpells();
 
+        void SetTrainingPoints(int32 TP);
+
         uint16 GetSpecialization() const { return m_petSpecialization; }
         void SetSpecialization(uint16 spec);
         void LearnSpecializationSpells();
@@ -159,8 +172,11 @@ class TC_GAME_API Pet : public Guardian
         std::string GetDebugInfo() const override;
 
     protected:
+        uint32  m_happinessTimer;
+        uint32  m_loyaltyTimer;
         PetType m_petType;
         int32   m_duration;                                 // time until unsummon (used mostly for summoned guardians and not used for controlled pets)
+        int32   m_loyaltyPoints;
         bool    m_loading;
         uint32  m_focusRegenTimer;
         uint32  m_groupUpdateMask;
