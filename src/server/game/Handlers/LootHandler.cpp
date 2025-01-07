@@ -374,7 +374,47 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
         }
         else if (loot->isLooted() || go->GetGoType() == GAMEOBJECT_TYPE_FISHINGNODE)
         {
-            if (go->GetGoType() == GAMEOBJECT_TYPE_FISHINGHOLE)
+            if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
+            {
+                uint32 go_min = go->GetGOInfo()->chest.minRestock;
+                uint32 go_max = go->GetGOInfo()->chest.maxRestock;
+                bool refill = false;
+
+                // only vein pass this check
+                if (go_min != 0 && go_max > go_min)
+                {
+                    float amount_rate = 1.f; //TODOFROST sWorld.getConfig(CONFIG_FLOAT_RATE_MINING_AMOUNT);
+                    float min_amount = go_min * amount_rate;
+                    float max_amount = go_max * amount_rate;
+
+                    go->AddUse();
+                    float uses = float(go->GetUseCount());
+                    if (uses < max_amount)
+                    {
+                        if (uses >= min_amount)
+                        {
+                            float chance_rate = 0.5f; //TODOFROST sWorld.getConfig(CONFIG_FLOAT_RATE_MINING_NEXT);
+
+                            int32 ReqValue = 175;
+                            LockEntry const* lockInfo = sLockStore.LookupEntry(go->GetGOInfo()->chest.open);
+                            if (lockInfo)
+                                ReqValue = lockInfo->Skill[0];
+                            float skill = float(player->GetSkillValue(SKILL_MINING)) / (ReqValue + 25);
+                            double chance = pow(0.8 * chance_rate, 4 * (1 / double(max_amount)) * double(uses));
+                            if (roll_chance_f(float(100.0f * chance + skill)))
+                                refill = true;
+                        }
+                        else
+                            refill = true;  // 100% chance until min uses
+                    }
+                }
+
+                if (refill)
+                    go->SetLootState(GO_READY);
+                else
+                    go->SetLootState(GO_JUST_DEACTIVATED);
+            }
+            else if (go->GetGoType() == GAMEOBJECT_TYPE_FISHINGHOLE)
             {                                               // The fishing hole used once more
                 go->AddUse();                               // if the max usage is reached, will be despawned in next tick
                 if (go->GetUseCount() >= go->GetGOValue()->FishingHole.MaxOpens)
