@@ -61,8 +61,7 @@ def import_templates_vmangos():
 
 
 def _upsert_quest_template(vm_qt, tri_qt = None):
-
-    #TODO quest_offer_reward
+    
     #TODO rewards
     #TODO other tables.
     
@@ -187,12 +186,15 @@ def _upsert_quest_template(vm_qt, tri_qt = None):
     db.tri_world.upsert(addon_upsert_query)
         
     _update_quest_objectives(vm_qt['entry'], vm_qt)
+    _update_quest_offer_reward(vm_qt['entry'], vm_qt)
+    _update_quest_request_items(vm_qt['entry'], vm_qt)
     
+ 
     
 def _update_quest_objectives(quest_id, vm_qt):
     
     existing_objectives = db.tri_world.select_all(
-        db.SelectQuery("quest_objectives").where('QuestID', '=', quest_id).order_by("`Order` ASC")
+        db.SelectQuery("quest_objectives").where('QuestID', '=', quest_id).order_by(["`Order` ASC", '`ID` ASC'])
     )
     
     #TODO check all fields
@@ -235,6 +237,7 @@ def _update_quest_objectives(quest_id, vm_qt):
     if vm_qt['RewOrReqMoney'] < 0:
         intermediate_rows.append([8, 0, vm_qt['RewOrReqMoney']])
             
+    added_ids = []
             
     order_index = 0
     storage_index = 0
@@ -269,19 +272,80 @@ def _update_quest_objectives(quest_id, vm_qt):
             'VerifiedBuild': constants.TargetBuild
         })
         
+        added_id = existing_id
+        
         if existing_id > 0:
             objective_upsert.where('ID', '=', existing_id)
         else:
             last_id = db.tri_world.get_row_raw("SELECT MAX(ID) FROM quest_objectives")
+            added_id = last_id[0] + 1
             objective_upsert.values({
                 'ID': last_id[0] + 1
             })
             
         db.tri_world.upsert(objective_upsert)
+        added_ids.append(added_id)
         
         order_index += 1
+    
+    del_cond = db.GroupCondition('AND').condition('QuestID', '=', quest_id)
+    
+    if len(added_ids) > 0:
+        del_cond.condition('ID', 'NOT IN', added_ids)
+    
+    db.tri_world.delete(
+        db.DeleteQuery("quest_objectives").where(del_cond)
+    )  
+ 
+def _update_quest_offer_reward(quest_id, vm_qt):
+    existing_record = db.tri_world.select_one(
+                db.SelectQuery("quest_offer_reward").where("ID", "=", quest_id)
+            )
+    
+    upsert = db.UpsertQuery("quest_offer_reward").values({
+        'Emote1': vm_qt['OfferRewardEmote1'],
+        'Emote2': vm_qt['OfferRewardEmote2'],
+        'Emote3': vm_qt['OfferRewardEmote3'],
+        'Emote4': vm_qt['OfferRewardEmote4'],
+        'EmoteDelay1': vm_qt['OfferRewardEmoteDelay1'],
+        'EmoteDelay2': vm_qt['OfferRewardEmoteDelay2'],
+        'EmoteDelay3': vm_qt['OfferRewardEmoteDelay3'],
+        'EmoteDelay4': vm_qt['OfferRewardEmoteDelay4'],
+        'RewardText': vm_qt['OfferRewardText'],
+        'VerifiedBuild': constants.TargetBuild
+    })
+    
+    if existing_record == None:
+        upsert.values({
+            'ID': quest_id
+        })
+    else:
+        upsert.where("ID", "=", quest_id)
         
-        #TODO delete obsolete objectives.
+    db.tri_world.upsert(upsert)
+
+def _update_quest_request_items(quest_id, vm_qt):
+    existing_record = db.tri_world.select_one(
+                db.SelectQuery("quest_request_items").where("ID", "=", quest_id)
+            )
+    
+    upsert = db.UpsertQuery("quest_request_items").values({
+        'EmoteOnComplete': vm_qt['CompleteEmote'],
+        'EmoteOnIncomplete': vm_qt['IncompleteEmote'],
+        'EmoteOnCompleteDelay': 0,
+        'EmoteOnIncompleteDelay': 0,
+        'CompletionText': vm_qt['RequestItemsText'],
+        'VerifiedBuild': constants.TargetBuild
+    })
+     
+    if existing_record == None:
+        upsert.values({
+            'ID': quest_id
+        })
+    else:
+        upsert.where("ID", "=", quest_id)
+        
+    db.tri_world.upsert(upsert)
         
 # convert vmangos value to TC index.
 def rep_value_convert(value):
