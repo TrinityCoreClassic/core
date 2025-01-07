@@ -94,11 +94,15 @@ def cleanup_old():
     )
     
     for row in trainer_spells:
-        vm_row = db.vm_world.select_one(
+        vm_row1 = db.vm_world.select_one(
             db.SelectQuery("npc_trainer_template").where('spell', '=', row['SpellId'])
         )
         
-        if vm_row == None:
+        vm_row2 = db.vm_world.select_one(
+            db.SelectQuery("npc_trainer").where('spell', '=', row['SpellId'])
+        )
+        
+        if vm_row1 == None and vm_row2 == None:
             db.tri_world.delete(
                 db.DeleteQuery("trainer_spell").where('SpellId', '=', row['SpellId'])
             )
