@@ -8818,8 +8818,8 @@ bool isValidString(const std::wstring& wstr, uint32 strictMask, bool numericOrSp
             return true;
         if (isCyrillicString(wstr, numericOrSpace))
             return true;
-        if (isEastAsianString(wstr, numericOrSpace))
-            return true;
+        //if (isEastAsianString(wstr, numericOrSpace))  //TODOFROST
+        //    return true;
         return false;
     }
 
@@ -8832,9 +8832,9 @@ bool isValidString(const std::wstring& wstr, uint32 strictMask, bool numericOrSp
         if (lt & LT_CYRILLIC)
             if (isCyrillicString(wstr, numericOrSpace))
                 return true;
-        if (lt & LT_EAST_ASIA)
-            if (isEastAsianString(wstr, numericOrSpace))
-                return true;
+        //if (lt & LT_EAST_ASIA)    //TODOFROST
+        //    if (isEastAsianString(wstr, numericOrSpace))
+        //        return true;
     }
 
     if (strictMask & 0x1)                                    // basic Latin

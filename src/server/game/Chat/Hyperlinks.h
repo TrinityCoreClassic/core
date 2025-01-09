@@ -233,7 +233,9 @@ namespace Trinity::Hyperlinks
         make_base_tag(title, uint32);
 
         // client format
-        make_base_tag(outfit, std::string const&); // some sort of weird base91 derived encoding
+        make_base_tag(clubFinder, ObjectGuid);
+        make_base_tag(clubTicket, std::string_view);
+        make_base_tag(outfit, std::string_view); // some sort of weird base91 derived encoding
     #undef make_base_tag
 
         struct TC_GAME_API achievement

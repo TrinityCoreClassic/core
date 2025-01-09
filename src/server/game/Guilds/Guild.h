@@ -810,14 +810,14 @@ class TC_GAME_API Guild
 
         void MassInviteToEvent(WorldSession* session, uint32 minLevel, uint32 maxLevel, GuildRankOrder minRank);
 
-        template<class Do>
-        void BroadcastWorker(Do& _do, Player* except = nullptr)
-        {
-            for (auto itr = m_members.begin(); itr != m_members.end(); ++itr)
-                if (Player* player = itr->second.FindConnectedPlayer())
-                    if (player != except)
-                        _do(player);
-        }
+		template<class Do>
+		void BroadcastWorker(Do&& _do, Player const* except = nullptr) const
+		{
+			for (auto const& [_, member] : m_members)
+				if (Player* player = member.FindConnectedPlayer())
+					if (player != except)
+						_do(player);
+		}
 
         // Members
         // Adds member to guild. If rankId == GUILD_RANK_NONE, lowest rank is assigned.

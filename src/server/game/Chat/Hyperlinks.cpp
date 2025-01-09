@@ -385,12 +385,12 @@ struct LinkValidator<LinkTags::quest>
 template <>
 struct LinkValidator<LinkTags::outfit>
 {
-    static bool IsTextValid(std::string const&, std::string_view)
+    static bool IsTextValid(std::string_view, std::string_view)
     {
         return true;
     }
 
-    static bool IsColorValid(std::string const&, HyperlinkColor c)
+    static bool IsColorValid(std::string_view, HyperlinkColor c)
     {
         return c == CHAT_LINK_COLOR_TRANSMOG;
     }

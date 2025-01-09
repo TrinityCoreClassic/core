@@ -627,6 +627,7 @@ struct AccountInfo
         int64 MuteTime;
         uint32 Recruiter;
         std::string OS;
+        Minutes TimezoneOffset;
         bool IsRectuiter;
         AccountTypes Security;
         bool IsBanned;
@@ -653,6 +654,7 @@ struct AccountInfo
         BattleNet.Locale = LocaleConstant(fields[7].GetUInt8());
         Game.Recruiter = fields[8].GetUInt32();
         Game.OS = fields[9].GetString();
+        Game.TimezoneOffset = Minutes(0);   //TODOFROST
         BattleNet.Id = fields[10].GetUInt32();
         Game.Security = AccountTypes(fields[11].GetUInt8());
         BattleNet.IsBanned = fields[12].GetUInt32() != 0;
@@ -869,7 +871,7 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<WorldPackets::Auth::
 
     _authed = true;
     _worldSession = new WorldSession(account.Game.Id, std::move(authSession->RealmJoinTicket), account.BattleNet.Id, shared_from_this(), account.Game.Security,
-        account.Game.Expansion, mutetime, account.Game.OS, account.BattleNet.Locale, account.Game.Recruiter, account.Game.IsRectuiter);
+        account.Game.Expansion, mutetime, account.Game.OS, account.Game.TimezoneOffset, account.BattleNet.Locale, account.Game.Recruiter, account.Game.IsRectuiter);
 
     // Initialize Warden system only if it is enabled by config
     if (wardenActive)

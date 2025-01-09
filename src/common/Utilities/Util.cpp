@@ -24,18 +24,32 @@
 #include <boost/core/demangle.hpp>
 #include <utf8.h>
 #include <algorithm>
-#include <iomanip>
-#include <sstream>
 #include <string>
 #include <cctype>
 #include <cstdarg>
 #include <ctime>
 
-#if TRINITY_COMPILER == TRINITY_COMPILER_GNU
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-  #include <arpa/inet.h>
+void Trinity::VerifyOsVersion()
+{
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
+    auto isWindowsBuildGreaterOrEqual = [](DWORD build)
+    {
+        OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, build, 0, {0}, 0, 0, 0, 0 };
+        ULONGLONG conditionMask = 0;
+        VER_SET_CONDITION(conditionMask, VER_BUILDNUMBER, VER_GREATER_EQUAL);
+
+        return VerifyVersionInfo(&osvi, VER_BUILDNUMBER, conditionMask);
+    };
+
+    if (!isWindowsBuildGreaterOrEqual(TRINITY_REQUIRED_WINDOWS_BUILD))
+    {
+        OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0, {0}, 0, 0, 0, 0 };
+        GetVersionEx((LPOSVERSIONINFO)&osvi);
+        ABORT_MSG("TrinityCore requires Windows 10 19H1 (1903) or Windows Server 2019 (1903) - require build number 10.0.%d but found %d.%d.%d",
+            TRINITY_REQUIRED_WINDOWS_BUILD, osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
+    }
 #endif
+}
 
 std::vector<std::string_view> Trinity::Tokenize(std::string_view str, char sep, bool keepEmpty)
 {
@@ -58,8 +72,19 @@ std::vector<std::string_view> Trinity::Tokenize(std::string_view str, char sep, 
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
 struct tm* localtime_r(time_t const* time, struct tm *result)
 {
-    localtime_s(result, time);
+    if (localtime_s(result, time) != 0)
+        return nullptr;
     return result;
+}
+struct tm* gmtime_r(time_t const* time, struct tm* result)
+{
+    if (gmtime_s(result, time) != 0)
+        return nullptr;
+    return result;
+}
+time_t timegm(struct tm* tm)
+{
+    return _mkgmtime(tm);
 }
 #endif
 
@@ -68,15 +93,6 @@ tm TimeBreakdown(time_t time)
     tm timeLocal;
     localtime_r(&time, &timeLocal);
     return timeLocal;
-}
-
-time_t LocalTimeToUTCTime(time_t time)
-{
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
-    return time + _timezone;
-#else
-    return time + timezone;
-#endif
 }
 
 time_t GetLocalHourTimestamp(time_t time, uint8 hour, bool onlyAfterTime)
@@ -113,86 +129,49 @@ std::string secsToTimeString(uint64 timeInSecs, TimeFormat timeFormat, bool hour
             return Trinity::StringFormat("0:{:02}", secs);
     }
 
-    std::ostringstream ss;
-    if (days)
+    std::string result;
+    if (timeFormat == TimeFormat::ShortText)
     {
-        ss << days;
-        switch (timeFormat)
+        std::back_insert_iterator<std::string> itr = std::back_inserter(result);
+        if (days)
+            Trinity::StringFormatTo(itr, "{}d", days);
+        if (hours || hoursOnly)
+            Trinity::StringFormatTo(itr, "{}h", hours);
+        if (!hoursOnly)
         {
-            case TimeFormat::ShortText:
-                ss << "d";
-                break;
-            case TimeFormat::FullText:
-                if (days == 1)
-                    ss << " Day ";
-                else
-                    ss << " Days ";
-                break;
-            default:
-                return "<Unknown time format>";
+            if (minutes)
+                Trinity::StringFormatTo(itr, "{}m", minutes);
+            if (secs || result.empty())
+                Trinity::StringFormatTo(itr, "{}s", secs);
         }
     }
-
-    if (hours || hoursOnly)
+    else if (timeFormat == TimeFormat::FullText)
     {
-        ss << hours;
-        switch (timeFormat)
+        auto formatTimeField = [](std::string& result, uint64 value, std::string_view label)
         {
-            case TimeFormat::ShortText:
-                ss << "h";
-                break;
-            case TimeFormat::FullText:
-                if (hours <= 1)
-                    ss << " Hour ";
-                else
-                    ss << " Hours ";
-                break;
-            default:
-                return "<Unknown time format>";
+            if (!result.empty())
+                result.append(1, ' ');
+            Trinity::StringFormatTo(std::back_inserter(result), "{} {}", value, label);
+            if (value != 1)
+                result.append(1, 's');
+        };
+        if (days)
+            formatTimeField(result, days, "Day");
+        if (hours || hoursOnly)
+            formatTimeField(result, hours, "Hour");
+        if (!hoursOnly)
+        {
+            if (minutes)
+                formatTimeField(result, minutes, "Minute");
+            if (secs || result.empty())
+                formatTimeField(result, secs, "Second");
         }
+        result.append(1, '.');
     }
-    if (!hoursOnly)
-    {
-        if (minutes)
-        {
-            ss << minutes;
-            switch (timeFormat)
-            {
-                case TimeFormat::ShortText:
-                    ss << "m";
-                    break;
-                case TimeFormat::FullText:
-                    if (minutes == 1)
-                        ss << " Minute ";
-                    else
-                        ss << " Minutes ";
-                    break;
-                default:
-                    return "<Unknown time format>";
-            }
-        }
+    else
+        result = "<Unknown time format>";
 
-        if (secs || (!days && !hours && !minutes))
-        {
-            ss << secs;
-            switch (timeFormat)
-            {
-                case TimeFormat::ShortText:
-                    ss << "s";
-                    break;
-                case TimeFormat::FullText:
-                    if (secs <= 1)
-                        ss << " Second.";
-                    else
-                        ss << " Seconds.";
-                    break;
-                default:
-                    return "<Unknown time format>";
-            }
-        }
-    }
-
-    return ss.str();
+    return result;
 }
 
 Optional<int64> MoneyStringToMoney(std::string const& moneyString)
@@ -281,6 +260,7 @@ std::string TimeToTimestampStr(time_t t)
     //       SS     seconds (2 digits 00-59)
     return Trinity::StringFormat("{:04}-{:02}-{:02}_{:02}-{:02}-{:02}", aTm.tm_year + 1900, aTm.tm_mon + 1, aTm.tm_mday, aTm.tm_hour, aTm.tm_min, aTm.tm_sec);
 }
+
 std::string TimeToHumanReadable(time_t t)
 {
     tm time;
@@ -811,6 +791,7 @@ bool ReadWinConsole(std::string& str, size_t size /*= 256*/)
 bool WriteWinConsole(std::string_view str, bool error /*= false*/)
 {
     std::wstring wstr;
+    wstr.reserve(str.length());
     if (!Utf8toWStr(str, wstr))
         return false;
 
@@ -844,15 +825,13 @@ std::string Trinity::Impl::ByteArrayToHexStr(uint8 const* bytes, size_t arrayLen
         op = -1;
     }
 
-    std::ostringstream ss;
+    std::string result;
+    result.reserve(arrayLen * 2);
+    auto inserter = std::back_inserter(result);
     for (int32 i = init; i != end; i += op)
-    {
-        char buffer[4];
-        sprintf(buffer, "%02X", bytes[i]);
-        ss << buffer;
-    }
+        Trinity::StringFormatTo(inserter, "{:02X}", bytes[i]);
 
-    return ss.str();
+    return result;
 }
 
 void Trinity::Impl::HexStrToByteArray(std::string_view str, uint8* out, size_t outlen, bool reverse /*= false*/)
@@ -872,10 +851,7 @@ void Trinity::Impl::HexStrToByteArray(std::string_view str, uint8* out, size_t o
 
     uint32 j = 0;
     for (int32 i = init; i != end; i += 2 * op)
-    {
-        char buffer[3] = { str[i], str[i + 1], '\0' };
-        out[j++] = uint8(strtoul(buffer, nullptr, 16));
-    }
+        out[j++] = Trinity::StringTo<uint8>(str.substr(i, 2), 16).value_or(0);
 }
 
 bool StringEqualI(std::string_view a, std::string_view b)
@@ -894,7 +870,7 @@ bool StringCompareLessI(std::string_view a, std::string_view b)
     return std::ranges::lexicographical_compare(a, b, {}, charToLower, charToLower);
 }
 
-std::string GetTypeName(std::type_info const& info)
+std::string Trinity::Impl::GetTypeName(std::type_info const& info)
 {
     return boost::core::demangle(info.name());
 }
