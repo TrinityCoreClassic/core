@@ -7,6 +7,7 @@ def Import():
     handle_spell_target_positions()
     handle_spell_groups()
     handle_spell_threat()
+    handle_spell_ranks()
 
 def handle_spell_target_positions():
     vm_rows = db.vm_world.get_rows_raw("SELECT id, target_map, target_position_x, target_position_y, target_position_z, target_orientation FROM spell_target_position WHERE build_max = 5875")
@@ -120,3 +121,52 @@ def handle_spell_threat():
             upsert.where("entry", "=", vm_row['entry'])
             
         db.tri_world.upsert(upsert)
+        
+        
+def handle_spell_ranks():
+    
+    vm_first_spells = db.vm_world.select_chunked(
+        db.SelectQuery("spell_chain").select("first_spell").where("build_max", "=", 5875).group_by("first_spell").order_by("first_spell ASC"),
+        500
+    )
+        
+    for vm_first_spell in vm_first_spells:
+        vm_spells = db.vm_world.select_all(
+            db.SelectQuery("spell_chain").where(
+                db.GroupCondition("AND").condition("build_max", "=", 5875).condition("first_spell", "=", vm_first_spell["first_spell"])
+            ).order_by("spell_id ASC")
+        )
+        
+        for vm_spell in vm_spells:
+            # avoid hassle with duplicate keys, always delete.
+            db.tri_world.delete(
+                db.DeleteQuery("spell_ranks").where("spell_id", "=", vm_spell['spell_id'])
+            )
+            
+            existing_cond = db.GroupCondition("AND").condition("first_spell_id", "=", vm_spell['first_spell']).condition("rank", "=", vm_spell["rank"])
+            
+            existing = db.tri_world.select_one(
+                db.SelectQuery("spell_ranks").where(existing_cond)
+            )
+            
+            if existing:
+                db.tri_world.upsert(
+                    db.UpsertQuery("spell_ranks").values({
+                        'spell_id': vm_spell['spell_id']
+                    }).where(existing_cond)
+                )
+            else:
+                db.tri_world.upsert(
+                    db.UpsertQuery("spell_ranks").values({
+                        'first_spell_id': vm_spell['first_spell'],
+                        'rank': vm_spell['rank'],
+                        'spell_id': vm_spell['spell_id']
+                    })
+                )
+                
+    
+        
+    
+        
+        
+        
