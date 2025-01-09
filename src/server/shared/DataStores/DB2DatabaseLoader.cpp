@@ -23,14 +23,9 @@
 #include "Log.h"
 #include <cstring>
 
-DB2LoadInfo::DB2LoadInfo(DB2FieldMeta const* fields, std::size_t fieldCount, DB2Meta const* meta, HotfixDatabaseStatements statement)
-    : DB2FileLoadInfo(fields, fieldCount, meta), Statement(statement)
-{
-}
-
 static char const* nullStr = "";
 
-char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, std::vector<char*>& stringPool)
+char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, std::vector<char*>& stringPool, uint32& minId)
 {
     // Even though this query is executed only once, prepared statement is used to send data from mysql server in binary format
     HotfixDatabasePreparedStatement* stmt = HotfixDatabase.GetPreparedStatement(_loadInfo->Statement);
@@ -57,7 +52,7 @@ char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, 
 
     if (indexTableSize > records)
     {
-        char** tmpIdxTable = new char*[indexTableSize];
+        char** tmpIdxTable = new char* [indexTableSize];
         memset(tmpIdxTable, 0, indexTableSize * sizeof(char*));
         memcpy(tmpIdxTable, indexTable, records * sizeof(char*));
         delete[] indexTable;
@@ -70,7 +65,6 @@ char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, 
     if (stringFields)
         stringPool.reserve(std::max<uint64>(stringPool.capacity(), stringPool.size() + stringFields * result->GetRowCount() + 1));
 
-    uint32 rec = 0;
     uint32 newRecords = 0;
 
     do
@@ -102,66 +96,65 @@ char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, 
         {
             for (uint32 z = 0; z < _loadInfo->Meta->Fields[x].ArraySize; ++z)
             {
-                switch (_loadInfo->TypesString[f])
+                switch (_loadInfo->Fields[f].Type)
                 {
-                    case FT_FLOAT:
-                        *((float*)(&dataValue[offset])) = fields[f].GetFloat();
-                        offset += 4;
-                        break;
-                    case FT_INT:
-                        *((int32*)(&dataValue[offset])) = fields[f].GetInt32();
-                        offset += 4;
-                        break;
-                    case FT_BYTE:
-                        *((int8*)(&dataValue[offset])) = fields[f].GetInt8();
-                        offset += 1;
-                        break;
-                    case FT_SHORT:
-                        *((int16*)(&dataValue[offset])) = fields[f].GetInt16();
-                        offset += 2;
-                        break;
-                    case FT_LONG:
-                        *((int64*)(&dataValue[offset])) = fields[f].GetInt64();
-                        offset += 8;
-                        break;
-                    case FT_STRING:
-                    {
-                        LocalizedString* slot = (LocalizedString*)(&dataValue[offset]);
-                        if (isNew)
-                            for (char const*& localeStr : slot->Str)
-                                localeStr = nullStr;
+                case FT_FLOAT:
+                    *((float*)(&dataValue[offset])) = fields[f].GetFloat();
+                    offset += 4;
+                    break;
+                case FT_INT:
+                    *((int32*)(&dataValue[offset])) = fields[f].GetInt32();
+                    offset += 4;
+                    break;
+                case FT_BYTE:
+                    *((int8*)(&dataValue[offset])) = fields[f].GetInt8();
+                    offset += 1;
+                    break;
+                case FT_SHORT:
+                    *((int16*)(&dataValue[offset])) = fields[f].GetInt16();
+                    offset += 2;
+                    break;
+                case FT_LONG:
+                    *((int64*)(&dataValue[offset])) = fields[f].GetInt64();
+                    offset += 8;
+                    break;
+                case FT_STRING:
+                {
+                    LocalizedString* slot = (LocalizedString*)(&dataValue[offset]);
+                    if (isNew)
+                        for (char const*& localeStr : slot->Str)
+                            localeStr = nullStr;
 
-                        // Value in database in main table field must be for enUS locale
-                        if (char* str = AddString(&slot->Str[LOCALE_enUS], fields[f].GetString()))
-                            stringPool.push_back(str);
+                    // Value in database in main table field must be for enUS locale
+                    if (char* str = AddString(&slot->Str[LOCALE_enUS], fields[f].GetString()))
+                        stringPool.push_back(str);
 
-                        offset += sizeof(LocalizedString);
-                        break;
-                    }
-                    case FT_STRING_NOT_LOCALIZED:
-                    {
-                        char const** slot = (char const**)(&dataValue[offset]);
+                    offset += sizeof(LocalizedString);
+                    break;
+                }
+                case FT_STRING_NOT_LOCALIZED:
+                {
+                    char const** slot = (char const**)(&dataValue[offset]);
 
-                        // Value in database in main table field must be for enUS locale
-                        if (char* str = AddString(slot, fields[f].GetString()))
-                            stringPool.push_back(str);
-                        else
-                            *slot = nullStr;
+                    // Value in database in main table field must be for enUS locale
+                    if (char* str = AddString(slot, fields[f].GetString()))
+                        stringPool.push_back(str);
+                    else
+                        *slot = nullStr;
 
-                        offset += sizeof(char*);
-                        break;
-                    }
-                    default:
-                        ABORT_MSG("Unknown format character '%c' found in %s meta for field %s",
-                            _loadInfo->TypesString[f], _storageName.c_str(), _loadInfo->Fields[f].Name);
-                        break;
+                    offset += sizeof(char*);
+                    break;
+                }
+                default:
+                    ABORT_MSG("Unknown format character '%c' found in %s meta for field %s",
+                        _loadInfo->Fields[f].Type, _storageName.c_str(), _loadInfo->Fields[f].Name);
+                    break;
                 }
                 ++f;
             }
         }
 
         ASSERT(offset == recordSize);
-        ++rec;
     } while (result->NextRow());
 
     if (!newRecords)
@@ -177,7 +170,11 @@ char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, 
 
     // insert new records to index table
     for (uint32 i = 0; i < newRecords; ++i)
-        indexTable[newIndexes[i]] = &dataTable[i * recordSize];
+    {
+        uint32 newId = newIndexes[i];
+        indexTable[newId] = &dataTable[i * recordSize];
+        minId = std::min(minId, newId);
+    }
 
     delete[] tempDataTable;
     delete[] newIndexes;
@@ -191,7 +188,7 @@ void DB2DatabaseLoader::LoadStrings(bool custom, LocaleConstant locale, uint32 r
 {
     HotfixDatabasePreparedStatement* stmt = HotfixDatabase.GetPreparedStatement(HotfixDatabaseStatements(_loadInfo->Statement + HOTFIX_LOCALE_STMT_OFFSET));
     stmt->setBool(0, !custom);
-    stmt->setString(1, localeNames[locale]);
+    stmt->setString(1, std::string(localeNames[locale]));
     PreparedQueryResult result = HotfixDatabase.Query(stmt);
     if (!result)
         return;
@@ -229,39 +226,39 @@ void DB2DatabaseLoader::LoadStrings(bool custom, LocaleConstant locale, uint32 r
             {
                 for (uint32 z = 0; z < _loadInfo->Meta->Fields[x].ArraySize; ++z)
                 {
-                    switch (_loadInfo->TypesString[fieldIndex])
+                    switch (_loadInfo->Fields[fieldIndex].Type)
                     {
-                        case FT_FLOAT:
-                        case FT_INT:
-                            offset += 4;
-                            break;
-                        case FT_BYTE:
-                            offset += 1;
-                            break;
-                        case FT_SHORT:
-                            offset += 2;
-                            break;
-                        case FT_LONG:
-                            offset += 8;
-                            break;
-                        case FT_STRING:
-                        {
-                            // fill only not filled entries
-                            LocalizedString* db2str = (LocalizedString*)(&dataValue[offset]);
-                            if (char* str = AddString(&db2str->Str[locale], fields[1 + stringFieldNumInRecord].GetString()))
-                                stringPool.push_back(str);
+                    case FT_FLOAT:
+                    case FT_INT:
+                        offset += 4;
+                        break;
+                    case FT_BYTE:
+                        offset += 1;
+                        break;
+                    case FT_SHORT:
+                        offset += 2;
+                        break;
+                    case FT_LONG:
+                        offset += 8;
+                        break;
+                    case FT_STRING:
+                    {
+                        // fill only not filled entries
+                        LocalizedString* db2str = (LocalizedString*)(&dataValue[offset]);
+                        if (char* str = AddString(&db2str->Str[locale], fields[1 + stringFieldNumInRecord].GetString()))
+                            stringPool.push_back(str);
 
-                            ++stringFieldNumInRecord;
-                            offset += sizeof(LocalizedString);
-                            break;
-                        }
-                        case FT_STRING_NOT_LOCALIZED:
-                            offset += sizeof(char*);
-                            break;
-                        default:
-                            ABORT_MSG("Unknown format character '%c' found in %s meta for field %s",
-                                _loadInfo->TypesString[fieldIndex], _storageName.c_str(), _loadInfo->Fields[fieldIndex].Name);
-                            break;
+                        ++stringFieldNumInRecord;
+                        offset += sizeof(LocalizedString);
+                        break;
+                    }
+                    case FT_STRING_NOT_LOCALIZED:
+                        offset += sizeof(char*);
+                        break;
+                    default:
+                        ABORT_MSG("Unknown format character '%c' found in %s meta for field %s",
+                            _loadInfo->Fields[fieldIndex].Type, _storageName.c_str(), _loadInfo->Fields[fieldIndex].Name);
+                        break;
                     }
                     ++fieldIndex;
                 }
