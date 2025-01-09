@@ -1723,7 +1723,7 @@ void World::LoadConfigSettings(bool reload)
 }
 
 /// Initialize the World
-void World::SetInitialWorldSettings()
+bool World::SetInitialWorldSettings()
 {
     sLog->SetRealmId(realm.Id.Realm);
 
@@ -1760,7 +1760,7 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Trinity strings...");
     if (!sObjectMgr->LoadTrinityStrings())
-        exit(1);                                            // Error message displayed in function already
+        return false;                                            // Error message displayed in function already
 
     ///- Update the realm entry in the database with the realm type from the config file
     //No SQL injection as values are treated as integers
@@ -1771,13 +1771,20 @@ void World::SetInitialWorldSettings()
 
     LoginDatabase.PExecute("UPDATE realmlist SET icon = {}, timezone = {} WHERE id = '{}'", server_type, realm_zone, realm.Id.Realm);      // One-time query
 
+    TC_LOG_INFO("server.loading", "Loading GameObject models...");
+    if (!LoadGameObjectModelList(m_dataPath))
+    {
+        TC_LOG_FATAL("server.loading", "Unable to load gameobject models (part of vmaps), objects using WMO models will crash the client - server shutting down!");
+        return false;
+    }
+
     TC_LOG_INFO("server.loading", "Initialize data stores...");
     ///- Load DB2s
     m_availableDbcLocaleMask = sDB2Manager.LoadStores(m_dataPath, m_defaultDbcLocale);
     if (!(m_availableDbcLocaleMask & (1 << m_defaultDbcLocale)))
     {
         TC_LOG_FATAL("server.loading", "Unable to load db2 files for {} locale specified in DBC.Locale config!", localeNames[m_defaultDbcLocale]);
-        exit(1);
+        return false;
     }
 
     TC_LOG_INFO("misc", "Loading hotfix blobs...");
@@ -1786,8 +1793,8 @@ void World::SetInitialWorldSettings()
     sDB2Manager.LoadHotfixData();
     TC_LOG_INFO("misc", "Loading hotfix optional data...");
     sDB2Manager.LoadHotfixOptionalData(m_availableDbcLocaleMask);
-    ///- Close hotfix database - it is only used during DB2 loading
-    HotfixDatabase.Close();
+    TC_LOG_INFO("misc", "Indexing loaded data stores...");
+    sDB2Manager.IndexLoadedStores();
     ///- Load M2 fly by cameras
     LoadM2Cameras(m_dataPath);
     ///- Load GameTables
@@ -2503,6 +2510,8 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.worldserver", "World initialized in {} minutes {} seconds", (startupDuration / 60000), ((startupDuration % 60000) / 1000));
 
     TC_METRIC_EVENT("events", "World initialized", "World initialized in " + std::to_string(startupDuration / 60000) + " minutes " + std::to_string((startupDuration % 60000) / 1000) + " seconds");
+
+    return true;
 }
 
 void World::SetForcedWarModeFactionBalanceState(TeamId team, int32 reward)

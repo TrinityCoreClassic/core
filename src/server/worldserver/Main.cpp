@@ -309,7 +309,8 @@ extern int main(int argc, char** argv)
 
     // Initialize the World
     sSecretMgr->Initialize(SECRET_OWNER_WORLDSERVER);
-    sWorld->SetInitialWorldSettings();
+    if (!sWorld->SetInitialWorldSettings())
+        return 1;
 
     std::shared_ptr<void> mapManagementHandle(nullptr, [](void*)
         {
