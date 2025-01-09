@@ -24,14 +24,9 @@
 #include "SharedDefines.h"
 #include <map>
 #include <set>
-#include <unordered_map>
+#include <span>
 #include <unordered_set>
 #include <vector>
-
- // temporary hack until includes are sorted out (don't want to pull in Windows.h)
-#ifdef GetClassName
-#undef GetClassName
-#endif
 
 class DB2HotfixGeneratorBase;
 
@@ -364,7 +359,7 @@ public:
     static bool IsInArea(uint32 objectAreaId, uint32 areaId);
     static char const* GetBroadcastTextValue(BroadcastTextEntry const* broadcastText, LocaleConstant locale = DEFAULT_LOCALE, uint8 gender = GENDER_MALE, bool forceGender = false);
     ChrClassUIDisplayEntry const* GetUiDisplayForClass(Classes unitClass) const;
-    static char const* GetClassName(uint8 class_, LocaleConstant locale = DEFAULT_LOCALE);
+    static char const* GetChrClassName(uint8 class_, LocaleConstant locale = DEFAULT_LOCALE);
     uint32 GetPowerIndexByClass(Powers power, uint32 classId) const;
     std::vector<ChrCustomizationChoiceEntry const*> const* GetCustomiztionChoices(uint32 chrCustomizationOptionId) const;
     std::vector<ChrCustomizationOptionEntry const*> const* GetCustomiztionOptions(uint8 race, uint8 gender) const;
