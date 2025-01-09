@@ -477,6 +477,26 @@ struct BroadcastTextLoadInfo
     }
 };
 
+struct CfgCategoriesLoadInfo
+{
+    static DB2LoadInfo const* Instance()
+    {
+        static constexpr DB2FieldMeta fields[7] =
+        {
+            { false, FT_INT, "ID" },
+            { false, FT_STRING, "Name" },
+            { false, FT_SHORT, "LocaleMask" },
+            { false, FT_BYTE, "CreateCharsetMask" },
+            { false, FT_BYTE, "ExistingCharsetMask" },
+            { false, FT_BYTE, "Flags" },
+            { true, FT_BYTE, "Order" },
+        };
+
+        static DB2LoadInfo const loadInfo(&fields[0], std::size(fields), Cfg_CategoriesMeta::Instance(), HOTFIX_SEL_CFG_CATEGORIES);
+        return &loadInfo;
+    }
+};
+
 struct CfgRegionsLoadInfo
 {
     static DB2LoadInfo const* Instance()
