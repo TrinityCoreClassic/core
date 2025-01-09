@@ -89,11 +89,17 @@ enum GridMapTypeMask
     GRID_MAP_TYPE_MASK_ALL              = 0xFF
 };
 
-typedef Grid<Player, AllWorldObjectTypes, AllGridObjectTypes> GridType;
-typedef NGrid<MAX_NUMBER_OF_CELLS, Player, AllWorldObjectTypes, AllGridObjectTypes> NGridType;
+extern template class TypeMapContainer<AllGridObjectTypes>;
+extern template class TypeMapContainer<AllWorldObjectTypes>;
 
 typedef TypeMapContainer<AllGridObjectTypes> GridTypeMapContainer;
 typedef TypeMapContainer<AllWorldObjectTypes> WorldTypeMapContainer;
+
+extern template class Grid<Player, WorldTypeMapContainer, GridTypeMapContainer>;
+extern template class NGrid<MAX_NUMBER_OF_CELLS, Player, WorldTypeMapContainer, GridTypeMapContainer>;
+
+typedef Grid<Player, WorldTypeMapContainer, GridTypeMapContainer> GridType;
+typedef NGrid<MAX_NUMBER_OF_CELLS, Player, WorldTypeMapContainer, GridTypeMapContainer> NGridType;
 
 template<uint32 LIMIT>
 struct CoordPair
