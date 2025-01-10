@@ -137,6 +137,10 @@ void Corpse::SaveToDB()
 
     for (UF::ChrCustomizationChoice customization : m_corpseData->Customizations)
     {
+        if (customization.ChrCustomizationOptionID == 0) {
+            continue;
+        }
+
         index = 0;
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_CORPSE_CUSTOMIZATIONS);
         stmt->setUInt64(index++, GetOwnerGUID().GetCounter());                        // OwnerGuid
