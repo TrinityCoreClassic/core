@@ -1683,6 +1683,7 @@ DROP TABLE IF EXISTS `character_talent`;
 CREATE TABLE `character_talent` (
   `guid` bigint unsigned NOT NULL,
   `talentId` int unsigned NOT NULL,
+  `talentRank` tinyint unsigned NOT NULL DEFAULT '0',
   `talentGroup` tinyint unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`guid`,`talentId`,`talentGroup`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
