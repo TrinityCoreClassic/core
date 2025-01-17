@@ -211,10 +211,10 @@ enum MaxConditionTargets
 
 struct TC_GAME_API ConditionSourceInfo
 {
-    WorldObject* mConditionTargets[MAX_CONDITION_TARGETS]; // an array of targets available for conditions
+    WorldObject const* mConditionTargets[MAX_CONDITION_TARGETS]; // an array of targets available for conditions
     Map const* mConditionMap;
     Condition const* mLastFailedCondition;
-    ConditionSourceInfo(WorldObject* target0, WorldObject* target1 = nullptr, WorldObject* target2 = nullptr);
+    ConditionSourceInfo(WorldObject const* target0, WorldObject const* target1 = nullptr, WorldObject const* target2 = nullptr);
     ConditionSourceInfo(Map const* map);
 };
 
@@ -291,7 +291,7 @@ class TC_GAME_API ConditionMgr
         static bool CanHaveSourceIdSet(ConditionSourceType sourceType);
         static bool CanHaveConditionType(ConditionSourceType sourceType, ConditionTypes conditionType);
         bool IsObjectMeetingNotGroupedConditions(ConditionSourceType sourceType, uint32 entry, ConditionSourceInfo& sourceInfo) const;
-        bool IsObjectMeetingNotGroupedConditions(ConditionSourceType sourceType, uint32 entry, WorldObject* target0, WorldObject* target1 = nullptr, WorldObject* target2 = nullptr) const;
+        bool IsObjectMeetingNotGroupedConditions(ConditionSourceType sourceType, uint32 entry, WorldObject const* target0, WorldObject const* target1 = nullptr, WorldObject const* target2 = nullptr) const;
         bool IsMapMeetingNotGroupedConditions(ConditionSourceType sourceType, uint32 entry, Map const* map) const;
         bool HasConditionsForNotGroupedEntry(ConditionSourceType sourceType, uint32 entry) const;
         bool IsObjectMeetingSpellClickConditions(uint32 creatureId, uint32 spellId, WorldObject* clicker, WorldObject* target) const;

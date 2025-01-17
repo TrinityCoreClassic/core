@@ -25145,7 +25145,7 @@ void Player::SetDailyQuestStatus(uint32 quest_id)
     }
 }
 
-bool Player::IsDailyQuestDone(uint32 quest_id)
+bool Player::IsDailyQuestDone(uint32 quest_id) const
 {
     return m_activePlayerData->DailyQuestsCompleted.FindIndex(quest_id) >= 0;
 }
