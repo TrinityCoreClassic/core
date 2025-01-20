@@ -2488,6 +2488,10 @@ void SpellInfo::_LoadAuraState()
 {
     _auraState = [this]()->AuraStateType
     {
+        // Seals
+        if (GetSpellSpecific() == SPELL_SPECIFIC_SEAL)
+            return AURA_STATE_JUDGEMENT;
+
         // Faerie Fire (Feral)
         if (GetCategory() == 1133)
             return AURA_STATE_FAERIE_FIRE;
@@ -2720,9 +2724,17 @@ void SpellInfo::_LoadSpellSpecific()
             case SPELLFAMILY_PALADIN:
             {
                 // Collection of all the seal family flags. No other paladin spell has any of those.
-                if (SpellFamilyFlags[1] & 0x26000C00
-                    || SpellFamilyFlags[0] & 0x0A000000)
-                    return SPELL_SPECIFIC_SEAL;
+                if constexpr (CURRENT_EXPANSION >= EXPANSION_WRATH_OF_THE_LICH_KING)
+                {
+                    if (SpellFamilyFlags[1] & 0x26000C00
+                        || SpellFamilyFlags[0] & 0x0A000000)
+                        return SPELL_SPECIFIC_SEAL;
+                }
+                else
+                {
+                    if (SpellFamilyFlags[0] & 0x0A000200)
+                        return SPELL_SPECIFIC_SEAL;
+                }
 
                 if (SpellFamilyFlags[0] & 0x00002190)
                     return SPELL_SPECIFIC_HAND;

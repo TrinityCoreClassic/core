@@ -3048,7 +3048,7 @@ TC_API_EXPORT EnumText EnumUtils<AuraStateType>::ToString(AuraStateType value)
         case AURA_STATE_WOUNDED_20_PERCENT: return { "AURA_STATE_WOUNDED_20_PERCENT", "AURA_STATE_WOUNDED_20_PERCENT", "CcT |" };
         case AURA_STATE_UNBALANCED: return { "AURA_STATE_UNBALANCED", "AURA_STATE_UNBALANCED", "CcT | NYI" };
         case AURA_STATE_FROZEN: return { "AURA_STATE_FROZEN", "AURA_STATE_FROZEN", "c t|" };
-        case AURA_STATE_MARKED: return { "AURA_STATE_MARKED", "AURA_STATE_MARKED", "C  t| NYI" };
+        case AURA_STATE_JUDGEMENT: return { "AURA_STATE_JUDGEMENT", "AURA_STATE_JUDGEMENT", "C  t| NYI" };
         case AURA_STATE_WOUNDED_25_PERCENT: return { "AURA_STATE_WOUNDED_25_PERCENT", "AURA_STATE_WOUNDED_25_PERCENT", "T |" };
         case AURA_STATE_DEFENSIVE_2: return { "AURA_STATE_DEFENSIVE_2", "AURA_STATE_DEFENSIVE_2", "Cc  | NYI" };
         case AURA_STATE_BANISHED: return { "AURA_STATE_BANISHED", "AURA_STATE_BANISHED", "c  | NYI" };
@@ -3085,7 +3085,7 @@ TC_API_EXPORT AuraStateType EnumUtils<AuraStateType>::FromIndex(size_t index)
         case 2: return AURA_STATE_WOUNDED_20_PERCENT;
         case 3: return AURA_STATE_UNBALANCED;
         case 4: return AURA_STATE_FROZEN;
-        case 5: return AURA_STATE_MARKED;
+        case 5: return AURA_STATE_JUDGEMENT;
         case 6: return AURA_STATE_WOUNDED_25_PERCENT;
         case 7: return AURA_STATE_DEFENSIVE_2;
         case 8: return AURA_STATE_BANISHED;
@@ -3119,7 +3119,7 @@ TC_API_EXPORT size_t EnumUtils<AuraStateType>::ToIndex(AuraStateType value)
         case AURA_STATE_WOUNDED_20_PERCENT: return 2;
         case AURA_STATE_UNBALANCED: return 3;
         case AURA_STATE_FROZEN: return 4;
-        case AURA_STATE_MARKED: return 5;
+        case AURA_STATE_JUDGEMENT: return 5;
         case AURA_STATE_WOUNDED_25_PERCENT: return 6;
         case AURA_STATE_DEFENSIVE_2: return 7;
         case AURA_STATE_BANISHED: return 8;

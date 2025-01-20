@@ -1210,14 +1210,13 @@ private:
     {
         return ValidateSpellInfo(
             {
-                SPELL_PALADIN_JUDGEMENT_DAMAGE,
                 _spellId
             });
     }
 
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
-        uint32 spellId2 = SPELL_PALADIN_JUDGEMENT_DAMAGE;
+        uint32 spellId2 = 0;
 
         // some seals have SPELL_AURA_DUMMY in EFFECT_2
         Unit::AuraEffectList const& auras = GetCaster()->GetAuraEffectsByType(SPELL_AURA_DUMMY);
@@ -1233,8 +1232,11 @@ private:
             }
         }
 
-        GetCaster()->CastSpell(GetHitUnit(), _spellId, true);
-        GetCaster()->CastSpell(GetHitUnit(), spellId2, true);
+        if (spellId2 > 1)
+        {
+            GetCaster()->CastSpell(GetHitUnit(), _spellId, true);
+            GetCaster()->CastSpell(GetHitUnit(), spellId2, true);
+        }
     }
 
     void Register() override

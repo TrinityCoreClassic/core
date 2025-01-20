@@ -2379,7 +2379,7 @@ enum AuraStateType
     AURA_STATE_WOUNDED_20_PERCENT           = 2,            // CcT |
     AURA_STATE_UNBALANCED                   = 3,            // CcT | NYI
     AURA_STATE_FROZEN                       = 4,            //  c t|
-    AURA_STATE_MARKED                       = 5,            // C  t| NYI
+    AURA_STATE_JUDGEMENT                    = 5,            // C   |
     AURA_STATE_WOUNDED_25_PERCENT           = 6,            //   T |
     AURA_STATE_DEFENSIVE_2                  = 7,            // Cc  | NYI
     AURA_STATE_BANISHED                     = 8,            //  c  | NYI
