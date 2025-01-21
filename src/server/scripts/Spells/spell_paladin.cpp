@@ -1220,20 +1220,25 @@ private:
 
         // some seals have SPELL_AURA_DUMMY in EFFECT_2
         Unit::AuraEffectList const& auras = GetCaster()->GetAuraEffectsByType(SPELL_AURA_DUMMY);
+        AuraEffect* aura = nullptr;
         for (Unit::AuraEffectList::const_iterator i = auras.begin(); i != auras.end(); ++i)
         {
             if ((*i)->GetSpellInfo()->GetSpellSpecific() == SPELL_SPECIFIC_SEAL && (*i)->GetEffIndex() == EFFECT_2)
             {
                 if (sSpellMgr->GetSpellInfo((*i)->GetAmount(), GetCastDifficulty()))
                 {
+                    aura = (*i);
                     spellId2 = (*i)->GetAmount();
                     break;
                 }
             }
         }
 
-        if (spellId2 > 1)
+        if (spellId2 > 1 && aura)
         {
+            if constexpr (CURRENT_EXPANSION < EXPANSION_WRATH_OF_THE_LICH_KING) {
+                GetCaster()->RemoveAurasDueToSpell(aura->GetId());
+            }
             GetCaster()->CastSpell(GetHitUnit(), _spellId, true);
             GetCaster()->CastSpell(GetHitUnit(), spellId2, true);
         }
