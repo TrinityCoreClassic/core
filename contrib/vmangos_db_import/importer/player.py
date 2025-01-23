@@ -58,6 +58,35 @@ def update_player_create_info():
                         "map = %s, position_x = %s, position_y = %s, position_z = %s, orientation = %s "
                         "WHERE race = %s AND class = %s")
         db.tri_world.execute_raw(update_query, vm_row)
+    
+    race_class_combos =  db.vm_world.select_all(
+        db.SelectQuery("playercreateinfo_action").select('race, class').group_by(['race', 'class'])
+    )
+    
+    for row in race_class_combos:
+        db.tri_world.delete(
+            db.DeleteQuery('playercreateinfo_action').where(
+                db.GroupCondition('AND').condition('race', '=', row['race']).condition('class', '=', row['class'])
+            )
+        )
+    
+    vm_rows = db.vm_world.select_all(db.SelectQuery("playercreateinfo_action"))
+    
+    for row in vm_rows:
+        db.tri_world.upsert(
+            db.UpsertQuery('playercreateinfo_action').values({
+                'race': row['race'],
+                'class': row['class'],
+                'button': row['button'],
+                'action': row['action'],
+                'type': row['type']
+            })
+        )
+        
+    db.tri_world.delete(
+        db.DeleteQuery('playercreateinfo_cast_spell')
+    )
+
         
 def update_class_level_stats():
     
