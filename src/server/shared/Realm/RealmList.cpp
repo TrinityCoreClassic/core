@@ -220,8 +220,14 @@ void RealmList::UpdateRealms(boost::system::error_code const& error)
 
     if (_updateInterval)
     {
-        _updateTimer->expires_from_now(boost::posix_time::seconds(_updateInterval));
-        _updateTimer->async_wait(std::bind(&RealmList::UpdateRealms, this, std::placeholders::_1));
+        _updateTimer->expires_after(std::chrono::seconds(_updateInterval));
+        _updateTimer->async_wait([this](boost::system::error_code const& error)
+        {
+            if (error)
+                return;
+
+            UpdateRealms(error);
+        });
     }
 }
 

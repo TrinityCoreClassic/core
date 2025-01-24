@@ -117,7 +117,7 @@ public:
             std::bind(&Socket<T, Stream>::ReadHandlerInternal, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
 
-    void AsyncReadWithCallback(void (T::*callback)(boost::system::error_code, std::size_t))
+    void AsyncReadWithCallback(void (T::*callback)(boost::system::error_code const &, std::size_t))
     {
         if (!IsOpen())
             return;

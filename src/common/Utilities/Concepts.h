@@ -15,23 +15,19 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRINITY_CRYPTO_CONSTANTS_H
-#define TRINITY_CRYPTO_CONSTANTS_H
+#ifndef TRINITYCORE_CONCEPTS_H
+#define TRINITYCORE_CONCEPTS_H
 
-#include "Define.h"
+#include <concepts>
+#include <functional> // std::invoke
 
 namespace Trinity
 {
-namespace Crypto
+template <typename Callable, typename R, typename... Args>
+concept invocable_r = requires(Callable && callable, Args&&... args)
 {
-    struct Constants
-    {
-        static constexpr size_t MD5_DIGEST_LENGTH_BYTES = 16;
-        static constexpr size_t SHA1_DIGEST_LENGTH_BYTES = 20;
-        static constexpr size_t SHA256_DIGEST_LENGTH_BYTES = 32;
-        static constexpr size_t SHA512_DIGEST_LENGTH_BYTES = 64;
-    };
-}
+    { std::invoke(static_cast<Callable&&>(callable), static_cast<Args&&>(args)...) } -> std::convertible_to<R>;
+};
 }
 
-#endif
+#endif // TRINITYCORE_CONCEPTS_H

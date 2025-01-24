@@ -32,6 +32,7 @@
 #include "DeadlineTimer.h"
 #include "GitRevision.h"
 #include "IPLocation.h"
+#include "IpNetwork.h"
 #include "LoginRESTService.h"
 #include "Memory.h"
 #include "MySQLThreading.h"
@@ -176,6 +177,8 @@ int main(int argc, char** argv)
 
     std::shared_ptr<Trinity::Asio::IoContext> ioContext = std::make_shared<Trinity::Asio::IoContext>();
 
+    Trinity::Net::ScanLocalNetworks();
+
     // Start the listening port (acceptor) for auth connections
     int32 bnport = sConfigMgr->GetIntDefault("BattlenetPort", 1119);
     if (bnport < 0 || bnport > 0xFFFF)
@@ -205,14 +208,17 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    auto sSessionMgrHandle = Trinity::make_unique_ptr_with_deleter(&sSessionMgr, [](Battlenet::SessionManager* sessMgr) { sessMgr->StopNetwork(); });
+    auto sSessionMgrHandle = Trinity::make_unique_ptr_with_deleter<&Battlenet::SessionManager::StopNetwork>(&sSessionMgr);
 
     // Set signal handlers
     boost::asio::signal_set signals(*ioContext, SIGINT, SIGTERM);
 #if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
     signals.add(SIGBREAK);
 #endif
-    signals.async_wait(std::bind(&SignalHandler, std::weak_ptr<Trinity::Asio::IoContext>(ioContext), std::placeholders::_1, std::placeholders::_2));
+    signals.async_wait([ioContextRef = std::weak_ptr(ioContext)](boost::system::error_code const& error, int signalNumber) mutable
+    {
+        SignalHandler(std::move(ioContextRef), error, signalNumber);
+    });
 
     // Set process priority according to configuration settings
     SetProcessPriority("server.bnetserver", sConfigMgr->GetIntDefault(CONFIG_PROCESSOR_AFFINITY, 0), sConfigMgr->GetBoolDefault(CONFIG_HIGH_PRIORITY, false));
@@ -220,12 +226,12 @@ int main(int argc, char** argv)
     // Enabled a timed callback for handling the database keep alive ping
     int32 dbPingInterval = sConfigMgr->GetIntDefault("MaxPingTime", 30);
     std::shared_ptr<Trinity::Asio::DeadlineTimer> dbPingTimer = std::make_shared<Trinity::Asio::DeadlineTimer>(*ioContext);
-    dbPingTimer->expires_from_now(boost::posix_time::minutes(dbPingInterval));
+    dbPingTimer->expires_after(std::chrono::minutes(dbPingInterval));
     dbPingTimer->async_wait(std::bind(&KeepDatabaseAliveHandler, std::weak_ptr<Trinity::Asio::DeadlineTimer>(dbPingTimer), dbPingInterval, std::placeholders::_1));
 
     int32 banExpiryCheckInterval = sConfigMgr->GetIntDefault("BanExpiryCheckInterval", 60);
     std::shared_ptr<Trinity::Asio::DeadlineTimer> banExpiryCheckTimer = std::make_shared<Trinity::Asio::DeadlineTimer>(*ioContext);
-    banExpiryCheckTimer->expires_from_now(boost::posix_time::seconds(banExpiryCheckInterval));
+    banExpiryCheckTimer->expires_after(std::chrono::seconds(banExpiryCheckInterval));
     banExpiryCheckTimer->async_wait(std::bind(&BanExpiryHandler, std::weak_ptr<Trinity::Asio::DeadlineTimer>(banExpiryCheckTimer), banExpiryCheckInterval, std::placeholders::_1));
 
 #if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
@@ -233,11 +239,11 @@ int main(int argc, char** argv)
     if (m_ServiceStatus != -1)
     {
         serviceStatusWatchTimer = std::make_shared<Trinity::Asio::DeadlineTimer>(*ioContext);
-        serviceStatusWatchTimer->expires_from_now(boost::posix_time::seconds(1));
-        serviceStatusWatchTimer->async_wait(std::bind(&ServiceStatusWatcher,
-            std::weak_ptr<Trinity::Asio::DeadlineTimer>(serviceStatusWatchTimer),
-            std::weak_ptr<Trinity::Asio::IoContext>(ioContext),
-            std::placeholders::_1));
+        serviceStatusWatchTimer->expires_after(1s);
+        serviceStatusWatchTimer->async_wait([timerRef = std::weak_ptr(serviceStatusWatchTimer), ioContextRef = std::weak_ptr(ioContext)](boost::system::error_code const& error) mutable
+        {
+            ServiceStatusWatcher(std::move(timerRef), std::move(ioContextRef), error);
+        });
     }
 #endif
 
@@ -295,7 +301,7 @@ void KeepDatabaseAliveHandler(std::weak_ptr<Trinity::Asio::DeadlineTimer> dbPing
             TC_LOG_INFO("server.bnetserver", "Ping MySQL to keep connection alive");
             LoginDatabase.KeepAlive();
 
-            dbPingTimer->expires_from_now(boost::posix_time::minutes(dbPingInterval));
+            dbPingTimer->expires_after(std::chrono::minutes(dbPingInterval));
             dbPingTimer->async_wait(std::bind(&KeepDatabaseAliveHandler, dbPingTimerRef, dbPingInterval, std::placeholders::_1));
         }
     }
@@ -311,7 +317,7 @@ void BanExpiryHandler(std::weak_ptr<Trinity::Asio::DeadlineTimer> banExpiryCheck
             LoginDatabase.Execute(LoginDatabase.GetPreparedStatement(LOGIN_UPD_EXPIRED_ACCOUNT_BANS));
             LoginDatabase.Execute(LoginDatabase.GetPreparedStatement(LOGIN_DEL_BNET_EXPIRED_ACCOUNT_BANNED));
 
-            banExpiryCheckTimer->expires_from_now(boost::posix_time::seconds(banExpiryCheckInterval));
+            banExpiryCheckTimer->expires_after(std::chrono::seconds(banExpiryCheckInterval));
             banExpiryCheckTimer->async_wait(std::bind(&BanExpiryHandler, banExpiryCheckTimerRef, banExpiryCheckInterval, std::placeholders::_1));
         }
     }
@@ -330,7 +336,7 @@ void ServiceStatusWatcher(std::weak_ptr<Trinity::Asio::DeadlineTimer> serviceSta
             }
             else if (std::shared_ptr<Trinity::Asio::DeadlineTimer> serviceStatusWatchTimer = serviceStatusWatchTimerRef.lock())
             {
-                serviceStatusWatchTimer->expires_from_now(boost::posix_time::seconds(1));
+                serviceStatusWatchTimer->expires_after(1s);
                 serviceStatusWatchTimer->async_wait(std::bind(&ServiceStatusWatcher, serviceStatusWatchTimerRef, ioContext, std::placeholders::_1));
             }
         }

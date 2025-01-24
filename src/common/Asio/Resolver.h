@@ -21,6 +21,7 @@
 #include "IoContext.h"
 #include "Optional.h"
 #include <boost/asio/ip/tcp.hpp>
+#include <algorithm>
 #include <string_view>
 #include <vector>
 
@@ -34,7 +35,7 @@ namespace Trinity
         class Resolver
         {
         public:
-            explicit Resolver(IoContext& ioContext) : _impl(ioContext) { }
+            explicit Resolver(IoContext& ioContext) : _impl(ioContext) {}
 
             Optional<boost::asio::ip::tcp::endpoint> Resolve(boost::asio::ip::tcp const& protocol, std::string_view host, std::string_view service)
             {

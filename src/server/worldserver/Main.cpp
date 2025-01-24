@@ -34,6 +34,7 @@
 #include "GitRevision.h"
 #include "InstanceSaveMgr.h"
 #include "IoContext.h"
+#include "IpNetwork.h"
 #include "MapManager.h"
 #include "Memory.h"
 #include "Metric.h"
@@ -98,8 +99,11 @@ public:
 
     static void Start(std::shared_ptr<FreezeDetector> const& freezeDetector)
     {
-        freezeDetector->_timer.expires_from_now(boost::posix_time::seconds(5));
-        freezeDetector->_timer.async_wait(std::bind(&FreezeDetector::Handler, std::weak_ptr<FreezeDetector>(freezeDetector), std::placeholders::_1));
+        freezeDetector->_timer.expires_after(5s);
+        freezeDetector->_timer.async_wait([freezeDetectorRef = std::weak_ptr(freezeDetector)](boost::system::error_code const& error) mutable
+        {
+            Handler(std::move(freezeDetectorRef), error);
+        });
     }
 
     static void Handler(std::weak_ptr<FreezeDetector> freezeDetectorRef, boost::system::error_code const& error);
@@ -279,6 +283,8 @@ extern int main(int argc, char** argv)
 
     // Set server offline (not connectable)
     LoginDatabase.DirectPExecute("UPDATE realmlist SET flag = flag | {} WHERE id = '{}'", REALM_FLAG_OFFLINE, realm.Id.Realm);
+
+    Trinity::Net::ScanLocalNetworks();
 
     sRealmList->Initialize(*ioContext, sConfigMgr->GetIntDefault("RealmsStateUpdateDelay", 10));
 
@@ -566,8 +572,11 @@ void FreezeDetector::Handler(std::weak_ptr<FreezeDetector> freezeDetectorRef, bo
                 ABORT();
             }
 
-            freezeDetector->_timer.expires_from_now(boost::posix_time::seconds(1));
-            freezeDetector->_timer.async_wait(std::bind(&FreezeDetector::Handler, freezeDetectorRef, std::placeholders::_1));
+            freezeDetector->_timer.expires_after(1s);
+            freezeDetector->_timer.async_wait([freezeDetectorRef = std::move(freezeDetectorRef)](boost::system::error_code const& error) mutable
+            {
+                Handler(std::move(freezeDetectorRef), error);
+            });
         }
     }
 }

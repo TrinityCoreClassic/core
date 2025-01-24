@@ -55,3 +55,8 @@ struct B64Impl
 {
     return Trinity::Impl::GenericBaseEncoding<B64Impl>::Decode(data);
 }
+
+/*static*/ Optional<std::vector<uint8>> Trinity::Encoding::Base64::Decode(std::string_view data)
+{
+    return Trinity::Impl::GenericBaseEncoding<B64Impl>::Decode(data);
+}
