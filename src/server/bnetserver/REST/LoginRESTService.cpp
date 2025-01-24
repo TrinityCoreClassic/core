@@ -80,28 +80,25 @@ bool LoginRESTService::Start(Trinity::Asio::IoContext* ioContext)
         _port = 8081;
     }
 
+    using namespace std::string_literals;
+    std::array<std::string, 2> configKeys = { { "LoginREST.ExternalAddress"s, "LoginREST.LocalAddress"s } };
+
     Trinity::Asio::Resolver resolver(*ioContext);
 
-    std::string configuredAddress = sConfigMgr->GetStringDefault("LoginREST.ExternalAddress", "127.0.0.1");
-    Optional<boost::asio::ip::tcp::endpoint> externalAddress = resolver.Resolve(boost::asio::ip::tcp::v4(), configuredAddress, std::to_string(_port));
-    if (!externalAddress)
+    for (std::size_t i = 0; i < _hostnames.size(); ++i)
     {
-        TC_LOG_ERROR("server.rest", "Could not resolve LoginREST.ExternalAddress {}", configuredAddress);
-        return false;
+        _hostnames[i].first = sConfigMgr->GetStringDefault(configKeys[i], "127.0.0.1");
+
+        std::ranges::transform(resolver.ResolveAll(_hostnames[i].first, ""),
+            std::back_inserter(_hostnames[i].second),
+            [](boost::asio::ip::tcp::endpoint const& endpoint) { return endpoint.address(); });
+
+        if (_hostnames[i].second.empty())
+        {
+            TC_LOG_ERROR("server.http.login", "Could not resolve {} {}", configKeys[i], _hostnames[i].first);
+            return false;
+        }
     }
-
-    _externalAddress = *externalAddress;
-
-    configuredAddress = sConfigMgr->GetStringDefault("LoginREST.LocalAddress", "127.0.0.1");
-    Optional<boost::asio::ip::tcp::endpoint> localAddress = resolver.Resolve(boost::asio::ip::tcp::v4(), configuredAddress, std::to_string(_port));
-    if (!localAddress)
-    {
-        TC_LOG_ERROR("server.rest", "Could not resolve LoginREST.LocalAddress {}", configuredAddress);
-        return false;
-    }
-
-    _localAddress = *localAddress;
-    _localNetmask = Trinity::Net::GetDefaultNetmaskV4(_localAddress.address().to_v4());
 
     // set up form inputs
     Battlenet::JSON::Login::FormInput* input;
@@ -135,17 +132,16 @@ void LoginRESTService::Stop()
     _thread.join();
 }
 
-boost::asio::ip::tcp::endpoint const& LoginRESTService::GetAddressForClient(boost::asio::ip::address const& address) const
+std::string const& LoginRESTService::GetHostnameForClient(boost::asio::ip::address const& address) const
 {
+    for (std::size_t i = 0; i < _hostnames.size(); ++i)
+        if (Trinity::Net::SelectAddressForClient(address, _hostnames[i].second))
+            return _hostnames[i].first;
+
     if (address.is_loopback())
-        return _localAddress;
-    else if (_localAddress.address().is_loopback())
-        return _externalAddress;
+        return _hostnames[1].first;
 
-    if (Trinity::Net::IsInNetwork(_localAddress.address().to_v4(), _localNetmask, address.to_v4()))
-        return _localAddress;
-
-    return _externalAddress;
+    return _hostnames[0].first;
 }
 
 void LoginRESTService::Run()
@@ -298,8 +294,7 @@ int32 LoginRESTService::HandleGetGameAccounts(std::shared_ptr<AsyncRequest> requ
 
 int32 LoginRESTService::HandleGetPortal(std::shared_ptr<AsyncRequest> request)
 {
-    boost::asio::ip::tcp::endpoint const& endpoint = GetAddressForClient(boost::asio::ip::address_v4(request->GetClient()->ip));
-    std::string response = Trinity::StringFormat("{}:{}", endpoint.address().to_string(), sConfigMgr->GetIntDefault("BattlenetPort", 1119));
+    std::string response = Trinity::StringFormat("{}:{}", GetHostnameForClient(boost::asio::ip::address_v4(request->GetClient()->ip)), sConfigMgr->GetIntDefault("BattlenetPort", 1119));
 
     soap_response(request->GetClient(), SOAP_FILE);
     soap_send_raw(request->GetClient(), response.c_str(), response.length());
