@@ -724,6 +724,23 @@ void CharacterDatabaseConnection::DoPrepareStatements()
 
     // War mode
     PrepareStatement(CHAR_SEL_WAR_MODE_TUNING, "SELECT race, COUNT(guid) FROM characters WHERE ((playerFlags & ?) = ?) AND logout_time >= (UNIX_TIMESTAMP() - 604800) GROUP BY race", CONNECTION_SYNCH);
+
+    // Honor CP
+    PrepareStatement(CHAR_UPD_RESET_HONOR_STANDING, "UPDATE `characters` SET `honorStanding` = 0 WHERE `honorStanding` > 0", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_HONOR_CP, "SELECT `victimType`, `victimId`, `cp`, `date`, `type` FROM `character_honor_cp` WHERE guid = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_HONOR_CP_ALL_PREVIOUS, "DELETE FROM `character_honor_cp` WHERE `date` < ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_HONOR_CP_WEEKLY_SCORES, "SELECT `scores`.`guid`, `c`.`level`, `c`.`account`, `c`.`honorRankPoints`, `c`.`honorHighestRank`, SUM(`hk`), SUM(`dk`), SUM(`cp`) FROM ("
+        "  SELECT `guid` AS `guid`, COUNT(*) AS `hk`, 0 AS `dk`, SUM(`cp`) AS `cp` FROM `character_honor_cp` WHERE `type` = ?"
+        "  AND (`date` BETWEEN ? AND ?) GROUP BY `guid`"
+        "  UNION"
+        "  SELECT `guid` AS `guid`, 0 AS `hk`, COUNT(*) AS `dk`, 0 AS `cp` FROM `character_honor_cp` WHERE `type` = ?"
+        "  AND (`date` BETWEEN ? AND ?) GROUP BY `guid`"
+        "  UNION"
+        "  SELECT `guid` AS `guid`, 0 AS `hk`, 0 AS `dk`, SUM(`cp`) AS `cp` FROM `character_honor_cp` WHERE `type` NOT IN (?, ?)"
+        "  AND (`date` BETWEEN ? AND ?) GROUP BY `guid`"
+        "  UNION"
+        "  SELECT `guid` AS `guid`, 0 AS `hk`, 0 AS `dk`, 0 AS `cp` FROM `characters` WHERE `honorRankPoints` > 0"
+        ") AS `scores` INNER JOIN `characters` AS `c` ON `scores`.`guid` = `c`.`guid` GROUP BY `guid` ORDER BY `guid` ", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo, ConnectionFlags connectionFlags) : MySQLConnection(connInfo, connectionFlags)

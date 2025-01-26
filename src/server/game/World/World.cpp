@@ -57,6 +57,7 @@
 #include "GridNotifiersImpl.h"
 #include "GroupMgr.h"
 #include "GuildMgr.h"
+#include "HonorMgr.h"
 #include "InstanceSaveMgr.h"
 #include "IPLocation.h"
 #include "Language.h"
@@ -134,6 +135,8 @@ PersistentWorldVariable const World::NextMonthlyQuestResetTimeVarId{ "NextMonthl
 PersistentWorldVariable const World::NextDailyQuestResetTimeVarId{ "NextDailyQuestResetTime" };
 PersistentWorldVariable const World::NextOldCalendarEventDeletionTimeVarId{ "NextOldCalendarEventDeletionTime" };
 PersistentWorldVariable const World::NextGuildWeeklyResetTimeVarId{ "NextGuildWeeklyResetTime" };
+PersistentWorldVariable const World::LastHonorMaintenanceTimeVarId{ "LastHonorMaintenanceTime" };
+PersistentWorldVariable const World::NextHonorMaintenanceTimeVarId{ "NextHonorMaintenanceTime" };
 
 /// World constructor
 World::World()
@@ -1353,6 +1356,10 @@ void World::LoadConfigSettings(bool reload)
     m_float_configs[CONFIG_ARENA_LOSE_RATING_MODIFIER]               = sConfigMgr->GetFloatDefault("Arena.ArenaLoseRatingModifier", 24.0f);
     m_float_configs[CONFIG_ARENA_MATCHMAKER_RATING_MODIFIER]         = sConfigMgr->GetFloatDefault("Arena.ArenaMatchmakerRatingModifier", 24.0f);
 
+    m_int_configs[CONFIG_HONOR_MIN_KILLS]                            = sConfigMgr->GetIntDefault("Honor.MinKills", 15);
+    m_float_configs[CONFIG_HONOR_RP_DECAY]                           = sConfigMgr->GetFloatDefault("Honor.RpDecay", 0.2f);
+    m_int_configs[CONFIG_HONOR_POOL_SIZE_PER_FACTION]                = sConfigMgr->GetIntDefault("Honor.PoolSizePerFaction", 0);
+
     if (reload)
     {
         sWorldStateMgr->SetValue(WS_CURRENT_PVP_SEASON_ID, getBoolConfig(CONFIG_ARENA_SEASON_IN_PROGRESS) ? getIntConfig(CONFIG_ARENA_SEASON_ID) : 0, false, nullptr);
@@ -2467,6 +2474,12 @@ bool World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Initializing quest reset times...");
     InitQuestResetTimes();
     CheckScheduledResetTimes();
+
+    if constexpr (CURRENT_EXPANSION == EXPANSION_CLASSIC)
+    {
+        sHonorMaintenancer->Initialize();
+        sHonorMaintenancer->DoMaintenance();
+    }
 
     TC_LOG_INFO("server.loading", "Calculate random battleground reset time...");
     InitRandomBGResetTime();

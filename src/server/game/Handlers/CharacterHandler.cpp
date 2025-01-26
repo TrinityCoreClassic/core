@@ -270,6 +270,10 @@ bool LoginQueryHolder::Initialize()
     stmt->setUInt64(0, lowGuid);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
 
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_HONOR_CP);
+    stmt->setUInt64(0, lowGuid);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_HONOR_CP, stmt);
+
     return res;
 }
 

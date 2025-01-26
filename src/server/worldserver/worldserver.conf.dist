@@ -28,6 +28,7 @@
 #    BATTLEGROUND CONFIG
 #    BATTLEFIELD CONFIG
 #    ARENA CONFIG
+#    HONOR CONFIG
 #    NETWORK CONFIG
 #    CONSOLE AND REMOTE ACCESS
 #    CHARACTER DELETE OPTIONS
@@ -3082,6 +3083,35 @@ Arena.ArenaMatchmakerRatingModifier = 24
 #                     1 - (Enabled)
 
 ArenaLog.ExtendedInfo = 0
+
+#
+###################################################################################################
+
+###################################################################################################
+# HONOR CONFIG
+#
+#    Honor.MinKills
+#        Description:  Min kills that players must obtain to enter in weekly honor calculation
+#        Default:     15
+
+Honor.MinKills = 15
+
+#
+#    Honor.RpDecay
+#        Description: Determines the percentage of rank points (RP) decay per week
+#                     If set to 0 there will be no decay
+#        Default:     0.2 - (20%)
+
+Honor.RpDecay = 0.2
+
+#
+#    Honor.PoolSizePerFaction
+#        Description: Defines the size of the active PvP pools of players per faction that's used to calculate standing on each
+#                     honor maintenance restart. It's mathematically impossible to reach Rank 14 in low population servers, hence
+#                     the need to "fake" the PvP pool. The minimum value is 167 for R14 to be achievable.
+#        Default:     0
+
+Honor.PoolSizePerFaction = 0
 
 #
 ###################################################################################################

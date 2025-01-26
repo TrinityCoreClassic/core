@@ -1094,6 +1094,33 @@ LOCK TABLES `character_homebind` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `character_honor_cp`
+--
+
+DROP TABLE IF EXISTS `character_honor_cp`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `character_honor_cp` (
+  `guid` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Global Unique Identifier',
+  `victimType` tinyint(3) unsigned NOT NULL DEFAULT '4' COMMENT 'Object Type Id',
+  `victimId` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Creature Id / Player Guid',
+  `cp` float NOT NULL DEFAULT '0',
+  `date` bigint NOT NULL DEFAULT '0',
+  `type` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`guid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Vanilla Honor System';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `character_honor_cp`
+--
+
+LOCK TABLES `character_honor_cp` WRITE;
+/*!40000 ALTER TABLE `character_honor_cp` DISABLE KEYS */;
+/*!40000 ALTER TABLE `character_honor_cp` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `character_instance`
 --
 
@@ -1867,6 +1894,13 @@ CREATE TABLE `characters` (
   `honorLevel` int unsigned NOT NULL DEFAULT '1',
   `honorRestState` tinyint unsigned NOT NULL DEFAULT '2',
   `honorRestBonus` float NOT NULL DEFAULT '0',
+  `honorRankPoints` float NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
+  `honorHighestRank` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
+  `honorStanding` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
+  `honorLastWeekHK` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
+  `honorLastWeekCP` float NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
+  `honorStoredHonorableKills` int(11) NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
+  `honorStoredDishonorableKills` int(11) NOT NULL DEFAULT '0' COMMENT 'Vanilla Honor System',
   `lastLoginBuild` int unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`guid`),
   KEY `idx_account` (`account`),

@@ -223,6 +223,7 @@ enum WorldFloatConfigs
     CONFIG_CALL_TO_ARMS_5_PCT,
     CONFIG_CALL_TO_ARMS_10_PCT,
     CONFIG_CALL_TO_ARMS_20_PCT,
+    CONFIG_HONOR_RP_DECAY,
     FLOAT_CONFIG_VALUE_COUNT
 };
 
@@ -432,6 +433,8 @@ enum WorldIntConfigs
     CONFIG_BLACKMARKET_MAXAUCTIONS,
     CONFIG_BLACKMARKET_UPDATE_PERIOD,
     CONFIG_FACTION_BALANCE_LEVEL_CHECK_DIFF,
+    CONFIG_HONOR_MIN_KILLS,
+    CONFIG_HONOR_POOL_SIZE_PER_FACTION,
     INT_CONFIG_VALUE_COUNT
 };
 
@@ -760,6 +763,8 @@ class TC_GAME_API World
         static PersistentWorldVariable const NextDailyQuestResetTimeVarId;                  // Next daily quest reset time
         static PersistentWorldVariable const NextOldCalendarEventDeletionTimeVarId;         // Next daily calendar deletions of old events time
         static PersistentWorldVariable const NextGuildWeeklyResetTimeVarId;                 // Next guild week reset time
+        static PersistentWorldVariable const LastHonorMaintenanceTimeVarId;                 // Last honor maintenance time
+        static PersistentWorldVariable const NextHonorMaintenanceTimeVarId;                 // Next honor maintenance time
 
         int32 GetPersistentWorldVariable(PersistentWorldVariable const& var) const;
         void SetPersistentWorldVariable(PersistentWorldVariable const& var, int32 value);
