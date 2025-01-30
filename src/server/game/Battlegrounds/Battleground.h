@@ -22,6 +22,7 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include "SharedDefines.h"
+#include "ZoneScript.h"
 #include <map>
 #include <vector>
 

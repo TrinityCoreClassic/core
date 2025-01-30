@@ -172,9 +172,9 @@ class spell_dru_berserk : public AuraScript
     void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         // Remove cooldown on Mangle (bear)
-        GetTarget()->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownStorageType::iterator itr) -> bool
+        GetTarget()->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownEntry const& cooldown) -> bool
             {
-                SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first, GetCastDifficulty());
+                SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(cooldown.SpellId, GetCastDifficulty());
                 return spellInfo && spellInfo->GetCategory() == SPELL_CATEGORY_MANGLE_BEAR;
             }, true);
     }

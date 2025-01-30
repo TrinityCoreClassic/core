@@ -406,17 +406,23 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
                     SendEncounterStart(1, 9, resInterval, resInterval);
 
                     instance->DoOnPlayers([](Player* player)
-                    {
-                        if (player->IsAlive())
-                            Unit::ProcSkillsAndAuras(player, nullptr, PROC_FLAG_ENCOUNTER_START, PROC_FLAG_NONE, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_NONE, PROC_HIT_NONE, nullptr, nullptr, nullptr);
-                    });
+                        {
+                            player->AtStartOfEncounter(EncounterType::DungeonEncounter);
+                        });
                     break;
                 }
                 case FAIL:
                 case DONE:
+                {
                     ResetCombatResurrections();
                     SendEncounterEnd();
+
+                    instance->DoOnPlayers([](Player* player)
+                    {
+                        player->AtEndOfEncounter(EncounterType::DungeonEncounter);
+                    });
                     break;
+                }
                 default:
                     break;
             }

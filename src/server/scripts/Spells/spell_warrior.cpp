@@ -783,9 +783,9 @@ class spell_warr_sword_and_board : public AuraScript
     void HandleProc(AuraEffect* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
         // Remove cooldown on Shield Slam
-        GetTarget()->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownStorageType::iterator itr) -> bool
+        GetTarget()->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownEntry const& cooldown) -> bool
             {
-                SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first, GetCastDifficulty());
+                SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(cooldown.SpellId, GetCastDifficulty());
                 return spellInfo && spellInfo->GetCategory() == SPELL_CATEGORY_SHIELD_SLAM;
             }, true);
     }

@@ -27,6 +27,13 @@ class Unit;
 class WorldObject;
 struct CreatureData;
 
+enum class EncounterType : uint8
+{
+    DungeonEncounter,
+    Battleground,
+    MythicPlusRun
+};
+
 class TC_GAME_API ZoneScript
 {
     public:

@@ -476,9 +476,9 @@ class spell_rog_preparation : public SpellScript
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
-        caster->GetSpellHistory()->ResetCooldowns([this, caster](SpellHistory::CooldownStorageType::iterator itr) -> bool
+        caster->GetSpellHistory()->ResetCooldowns([this, caster](SpellHistory::CooldownEntry const& cooldown) -> bool
             {
-                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first, GetCastDifficulty());
+                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(cooldown.SpellId, GetCastDifficulty());
                 if (spellInfo->SpellFamilyName != SPELLFAMILY_ROGUE)
                     return false;
                 

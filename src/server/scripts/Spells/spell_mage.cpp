@@ -304,9 +304,9 @@ class spell_mage_cold_snap : public SpellScript
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
-        GetCaster()->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownStorageType::iterator itr) -> bool
+        GetCaster()->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownEntry const& cooldown) -> bool
             {
-                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first, GetCastDifficulty());
+                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(cooldown.SpellId, GetCastDifficulty());
                 return spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST) &&
                     spellInfo->Id != SPELL_MAGE_COLD_SNAP && spellInfo->GetRecoveryTime() > 0;
             }, true);
@@ -709,9 +709,9 @@ class spell_mage_glyph_of_ice_block : public AuraScript
     {
         PreventDefaultAction();
         Unit* caster = eventInfo.GetActor();
-        caster->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownStorageType::iterator itr) -> bool
+        caster->GetSpellHistory()->ResetCooldowns([this](SpellHistory::CooldownEntry const& cooldown) -> bool
             {
-                SpellInfo const* cdSpell = sSpellMgr->GetSpellInfo(itr->first, GetCastDifficulty());
+                SpellInfo const* cdSpell = sSpellMgr->GetSpellInfo(cooldown.SpellId, GetCastDifficulty());
                 if (!cdSpell || cdSpell->SpellFamilyName != SPELLFAMILY_MAGE
                     || !(cdSpell->SpellFamilyFlags[0] & 0x00000040))
                     return false;
