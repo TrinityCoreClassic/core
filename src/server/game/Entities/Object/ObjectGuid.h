@@ -15,8 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ObjectGuid_h__
-#define ObjectGuid_h__
+#ifndef TRINITYCORE_OBJECT_GUID_H
+#define TRINITYCORE_OBJECT_GUID_H
 
 #include "Define.h"
 #include "EnumFlag.h"
@@ -343,8 +343,8 @@ class TC_GAME_API ObjectGuid
             return _data[0] < guid._data[0];
         }
 
-        static char const* GetTypeName(HighGuid high);
-        char const* GetTypeName() const { return !IsEmpty() ? GetTypeName(GetHigh()) : "None"; }
+		static std::string_view GetTypeName(HighGuid high);
+        std::string_view GetTypeName() const { return !IsEmpty() ? GetTypeName(GetHigh()) : "None"; }
         std::string ToString() const;
         std::string ToHexString() const;
         static ObjectGuid FromString(std::string const& guidString);
@@ -388,40 +388,6 @@ using GuidList = std::list<ObjectGuid>;
 using GuidDeque = std::deque<ObjectGuid>;
 using GuidVector = std::vector<ObjectGuid>;
 using GuidUnorderedSet = std::unordered_set<ObjectGuid>;
-
-class TC_GAME_API ObjectGuidGeneratorBase
-{
-public:
-    ObjectGuidGeneratorBase(ObjectGuid::LowType start = UI64LIT(1)) : _nextGuid(start) { }
-    virtual ~ObjectGuidGeneratorBase() = default;
-
-    virtual void Set(ObjectGuid::LowType val) { _nextGuid = val; }
-    virtual ObjectGuid::LowType Generate() = 0;
-    ObjectGuid::LowType GetNextAfterMaxUsed() const { return _nextGuid; }
-
-protected:
-    static void HandleCounterOverflow(HighGuid high);
-    static void CheckGuidTrigger(ObjectGuid::LowType guid);
-    ObjectGuid::LowType _nextGuid;
-};
-
-template<HighGuid high>
-class TC_GAME_API ObjectGuidGenerator : public ObjectGuidGeneratorBase
-{
-public:
-    explicit ObjectGuidGenerator(ObjectGuid::LowType start = UI64LIT(1)) : ObjectGuidGeneratorBase(start) { }
-
-    ObjectGuid::LowType Generate() override
-    {
-        if (_nextGuid >= ObjectGuid::GetMaxCounter(high) - 1)
-            HandleCounterOverflow(high);
-
-        if (high == HighGuid::Creature || high == HighGuid::Vehicle || high == HighGuid::GameObject || high == HighGuid::Transport)
-            CheckGuidTrigger(_nextGuid);
-
-        return _nextGuid++;
-    }
-};
 
 TC_GAME_API ByteBuffer& operator<<(ByteBuffer& buf, ObjectGuid const& guid);
 TC_GAME_API ByteBuffer& operator>>(ByteBuffer& buf, ObjectGuid&       guid);
@@ -531,4 +497,4 @@ namespace Trinity
     }
 }
 
-#endif // ObjectGuid_h__
+#endif // TRINITYCORE_OBJECT_GUID_H

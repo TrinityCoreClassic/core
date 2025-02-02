@@ -151,7 +151,7 @@ i_scriptLock(false), _respawnCheckTimer(0)
 
     _weatherUpdateTimer.SetInterval(time_t(1 * IN_MILLISECONDS));
 
-    GetGuidSequenceGenerator<HighGuid::Transport>().Set(sObjectMgr->GetGenerator<HighGuid::Transport>().GetNextAfterMaxUsed());
+    GetGuidSequenceGenerator(HighGuid::Transport).Set(sObjectMgr->GetGenerator<HighGuid::Transport>().GetNextAfterMaxUsed());
 
     _poolData = sPoolMgr->InitPoolsForMap(this);
 
@@ -2485,6 +2485,11 @@ void Map::UpdateSpawnGroupConditions()
         else
             SetSpawnGroupInactive(spawnGroupId);
     }
+}
+
+ObjectGuidGenerator& Map::GetGuidSequenceGenerator(HighGuid high)
+{
+    return _guidGenerators.try_emplace(high, high).first->second;
 }
 
 void Map::AddFarSpellCallback(FarSpellCallback&& callback)

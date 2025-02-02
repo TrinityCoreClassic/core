@@ -14,11 +14,13 @@
  * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TRINITY_CHANNELMGR_H
-#define __TRINITY_CHANNELMGR_H
+#ifndef TRINITYCORE_CHANNEL_MGR_H
+#define TRINITYCORE_CHANNEL_MGR_H
 
 #include "Define.h"
 #include "ObjectGuid.h"
+#include "ObjectGuidSequenceGenerator.h"
+#include "SharedDefines.h"
 #include <string>
 #include <unordered_map>
 
@@ -32,7 +34,7 @@ class TC_GAME_API ChannelMgr
     typedef std::unordered_map<ObjectGuid, Channel*> BuiltinChannelContainer;
 
     protected:
-        explicit ChannelMgr(uint32 team) : _team(team) { }
+        explicit ChannelMgr(uint32 team) : _team(team), _guidGenerator(HighGuid::ChatChannel) { }
         ~ChannelMgr();
 
     public:
@@ -57,7 +59,7 @@ class TC_GAME_API ChannelMgr
         CustomChannelContainer _customChannels;
         BuiltinChannelContainer _channels;
         uint32 const _team;
-        ObjectGuidGenerator<HighGuid::ChatChannel> _guidGenerator;
+        ObjectGuidGenerator _guidGenerator;
 
         static void SendNotOnChannelNotify(Player const* player, std::string const& name);
         ObjectGuid CreateCustomChannelGuid();
