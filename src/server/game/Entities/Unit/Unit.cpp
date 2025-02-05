@@ -9459,12 +9459,15 @@ void Unit::TriggerOnPowerChangeAuras(Powers power, int32 oldVal, int32 newVal)
             float oldValueCheck = oldVal;
             float newValueCheck = newVal;
 
-            if (effect->GetAuraType() == SPELL_AURA_TRIGGER_SPELL_ON_POWER_PCT)
-            {
-                int32 maxPower = GetMaxPower(power);
-                oldValueCheck = GetPctOf(oldVal, maxPower);
-                newValueCheck = GetPctOf(newVal, maxPower);
-            }
+                if (effect->GetAuraType() == SPELL_AURA_TRIGGER_SPELL_ON_POWER_PCT)
+                {
+                    int32 maxPower = GetMaxPower(power);
+                    if (!maxPower)
+                        continue;
+
+                    oldValueCheck = GetPctOf(oldVal, maxPower);
+                    newValueCheck = GetPctOf(newVal, maxPower);
+                }
 
             switch (AuraTriggerOnPowerChangeDirection(effect->GetMiscValueB()))
             {
