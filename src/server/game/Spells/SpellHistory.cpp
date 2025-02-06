@@ -564,38 +564,43 @@ void SpellHistory::AddCooldown(uint32 spellId, uint32 itemId, TimePoint cooldown
     }
 }
 
-void SpellHistory::ModifySpellCooldown(uint32 spellId, Duration offset, bool withoutCategoryCooldown)
+void SpellHistory::ModifySpellCooldown(uint32 spellId, Duration cooldownMod, bool withoutCategoryCooldown)
 {
     auto itr = _spellCooldowns.find(spellId);
-    if (!offset.count() || itr == _spellCooldowns.end())
+    if (!cooldownMod.count() || itr == _spellCooldowns.end())
         return;
 
-    Clock::time_point now = GameTime::GetTime<Clock>();
+    ModifySpellCooldown(itr, cooldownMod, withoutCategoryCooldown);
+}
 
-    itr->second.CooldownEnd += offset;
+void SpellHistory::ModifySpellCooldown(CooldownStorageType::iterator& itr, Duration cooldownMod, bool withoutCategoryCooldown)
+{
+    TimePoint now = time_point_cast<Duration>(GameTime::GetTime<Clock>());
+
+    itr->second.CooldownEnd += cooldownMod;
 
     if (itr->second.CategoryId)
     {
         if (!withoutCategoryCooldown)
-            itr->second.CategoryEnd += offset;
+            itr->second.CategoryEnd += cooldownMod;
 
         // Because category cooldown existence is tied to regular cooldown, we cannot allow a situation where regular cooldown is shorter than category
         if (itr->second.CooldownEnd < itr->second.CategoryEnd)
             itr->second.CooldownEnd = itr->second.CategoryEnd;
     }
 
-    if (itr->second.CooldownEnd <= now)
-        EraseCooldown(itr);
-
     if (Player* playerOwner = GetPlayerOwner())
     {
         WorldPackets::Spells::ModifyCooldown modifyCooldown;
         modifyCooldown.IsPet = _owner != playerOwner;
-        modifyCooldown.SpellID = spellId;
-        modifyCooldown.DeltaTime = std::chrono::duration_cast<Milliseconds>(offset).count();
+        modifyCooldown.SpellID = itr->second.SpellId;
+        modifyCooldown.DeltaTime = duration_cast<Milliseconds>(cooldownMod).count();
         modifyCooldown.WithoutCategoryCooldown = withoutCategoryCooldown;
         playerOwner->SendDirectMessage(modifyCooldown.Write());
     }
+
+    if (itr->second.CooldownEnd <= now)
+        itr = EraseCooldown(itr);
 }
 
 void SpellHistory::ModifyCooldown(uint32 spellId, Duration cooldownMod, bool withoutCategoryCooldown)

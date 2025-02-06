@@ -199,7 +199,8 @@ public:
 
 private:
     Player* GetPlayerOwner() const;
-    void ModifySpellCooldown(uint32 spellId, Duration cooldownMod, bool withoutCategoryCooldown = false);
+    void ModifySpellCooldown(uint32 spellId, Duration cooldownMod, bool withoutCategoryCooldown);
+    void ModifySpellCooldown(CooldownStorageType::iterator& itr, Duration cooldownMod, bool withoutCategoryCooldown);
     void ResetCooldown(CooldownStorageType::iterator& itr, bool update = false);
     void SendClearCooldowns(std::vector<int32> const& cooldowns) const;
     CooldownStorageType::iterator EraseCooldown(CooldownStorageType::iterator itr)

@@ -421,7 +421,7 @@ namespace UF
             std::conditional_t<PublicSet, UpdateFieldPublicSetter<V>, UpdateFieldSetter<V>>>>>
             ModifyValue(Compat::UpdateField<V, Index, Offset>(T::* field))
         {
-            constexpr auto size = sizeof(Compat::UpdateField<V, Index, Offset>::value_type);
+            constexpr auto size = sizeof(typename Compat::UpdateField<V, Index, Offset>::value_type);
             constexpr auto blocks = Compat::GetBlockCount(size * 8);
             constexpr bool has_mask = std::is_base_of<HasChangesMaskTag, V>::value;
 
@@ -445,7 +445,7 @@ namespace UF
             std::conditional_t<PublicSet, UpdateFieldPublicSetter<V>, UpdateFieldSetter<V>>>>>
             ModifyValue(Compat::UpdateFieldArray<V, Size, Index, Offset>(T::* field), uint32 index)
         {
-            constexpr auto size = sizeof(Compat::UpdateFieldArray<V, Size, Index, Offset>::value_type);
+            constexpr auto size = sizeof(typename Compat::UpdateFieldArray<V, Size, Index, Offset>::value_type);
             constexpr auto block_size = sizeof(Compat::BlockType);
             constexpr auto blocks = Compat::GetBlockCount(size * 8);
             constexpr bool has_mask = std::is_base_of<HasChangesMaskTag, V>::value;
@@ -1237,13 +1237,13 @@ namespace UF
         class HasDynamicChangesMask : public HasDynamicChangesMaskTag
         {
             template<typename T>
-            friend struct DynamicUpdateFieldSetter;
+            friend struct UF::DynamicUpdateFieldSetter;
 
             template<typename T, bool PublicSet>
-            friend struct MutableFieldReference;
+            friend struct UF::MutableFieldReference;
 
             template<typename T, uint32 BlockBit, uint32 Bit>
-            friend class DynamicUpdateField;
+            friend class UF::DynamicUpdateField;
 
         public:
             using DyBase = HasDynamicChangesMask<Bits>;
@@ -1288,18 +1288,18 @@ namespace UF
             DyMask _changesDynamicMask;
         };
 
-        template<typename T, uint32 Index, uint32 Offset = 0>
+        template<typename T, uint32 Index_, uint32 Offset = 0>
         class UpdateField : public UpdateFieldBase<T>
         {
         public:
-            static constexpr uint32 Index = Index;
+            static constexpr uint32 Index = Index_;
         };
 
-        template<typename T, std::size_t Size, uint32 Index, uint32 Offset = 0>
+        template<typename T, std::size_t Size, uint32 Index_, uint32 Offset = 0>
         class UpdateFieldArray : public UpdateFieldArrayBase<T, Size>
         {
         public:
-            static constexpr uint32 Index = Index;
+            static constexpr uint32 Index = Index_;
         };
 
         template<typename T, uint32 Index, uint32 Offset = 0>
