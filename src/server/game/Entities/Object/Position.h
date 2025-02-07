@@ -19,6 +19,7 @@
 #define Trinity_game_Position_h__
 
 #include "Define.h"
+#include <span>
 #include <string>
 #include <cmath>
 
@@ -149,6 +150,8 @@ public:
 
     // dist2d < radius && abs(dz) < height
     bool IsWithinDoubleVerticalCylinder(Position const* center, float radius, float height) const;
+
+    bool IsInPolygon2D(Position const& polygonOrigin, std::span<Position const> vertices) const;
 
     bool HasInArc(float arcangle, Position const* pos, float border = 2.0f) const;
     bool HasInLine(Position const* pos, float objSize, float width) const;
