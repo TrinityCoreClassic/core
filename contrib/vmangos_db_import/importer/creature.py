@@ -4,8 +4,9 @@ import constants
 import database as db
 
 next_entry_guid = 333000
+pool_entry_offset = 1000000
 
-imported_entry_guids = []
+imported_entry_guids = {}
 
 def Import():
     global next_entry_guid
@@ -14,9 +15,10 @@ def Import():
     
     #clean_templates_check_vmangos()
     #clean_entries_check_vmangos()
-    import_templates_vmangos()
+    # import_templates_vmangos()
     import_entries_vmangos()
     update_instance_info()
+
 
 
 def clean_templates_check_vmangos():    
@@ -91,7 +93,17 @@ def _handle_clean_entry_row(row):
     match = db.vm_world.select_one(
         db.SelectQuery("creature").where(
             db.GroupCondition("AND").condition(
-                'id', '=', row[1]
+                db.GroupCondition('OR').condition(
+                    'id', '=', row[1]
+                ).condition(
+                    'id2', '=', row[1]
+                ).condition(
+                    'id3', '=', row[1]
+                ).condition(
+                    'id4', '=', row[1]
+                ).condition(
+                    'id5', '=', row[1]
+                )
             ).condition(
                 'map', '=', row[2]
             ).condition(
@@ -124,71 +136,147 @@ def import_templates_vmangos():
                     
 
 def import_entries_vmangos():
+    global pool_entry_offset
+    global imported_entry_guids
     
     db.tri_world.execute_raw("DELETE FROM game_event_creature")
     db.tri_world.execute_raw("DELETE FROM creature_equip_template") # TODO more intelligent method of loading/resetting equipment.
     
-    db.vm_world.chunk_raw(
-        "SELECT guid, id, map, position_x, position_y, position_z FROM creature WHERE patch_max = 10 LIMIT %s OFFSET %s",
-        500,
-        _handle_import_entry_row
+    # strict (attempt exact matches first time.)
+    vm_entries = db.vm_world.select_chunked(
+        db.SelectQuery("creature").select(
+            'guid, id, id2, id3, id4, id5, map, position_x, position_y, position_z'
+            ).where(
+            'patch_max', '=', 10
+            ),
+        250
     )
+        
+    for vm_entry in vm_entries:
+        inline_pooled_ids = [vm_entry['id']]
+        for num in range(2, 5 + 1):
+            key = 'id{}'.format(num)
+            if vm_entry[key] > 0:
+                inline_pooled_ids.append(vm_entry[key])
+        
+        for pooled_id in inline_pooled_ids:
+            _handle_import_entry_row(vm_entry, pooled_id, -1)
+    
+    # complete
+    vm_entries = db.vm_world.select_chunked(
+        db.SelectQuery("creature").select(
+            'guid, id, id2, id3, id4, id5, map, position_x, position_y, position_z'
+            ).where(
+            'patch_max', '=', 10
+            ),
+        250
+    )
+    
+    for vm_entry in vm_entries:
+        inline_pooled_ids = [vm_entry['id']]
+        for num in range(2, 5 + 1):
+            key = 'id{}'.format(num)
+            if vm_entry[key] > 0:
+                inline_pooled_ids.append(vm_entry[key])
+        
+        
+        tc_pooled_guids = []
+        pooled_index = 0
+        for pooled_id in inline_pooled_ids:
+            existing = None
+            for imported in imported_entry_guids:
+                if imported_entry_guids[imported][0] == vm_entry['guid'] and imported_entry_guids[imported][1] == pooled_id:
+                    existing = imported
+                    break
+            
+            if existing:
+                tc_pooled_guids.append(existing)
+            else:            
+                tc_pooled_guids.append(
+                    _handle_import_entry_row(vm_entry, pooled_id, 15 if pooled_index == 0 else 0.01)
+                )
+                
+            pooled_index = pooled_index + 1
+        
+        if len(tc_pooled_guids) > 1:
+            pool_name = 'Vmangos Inline Creature ({})'.format(vm_entry['guid'])
+            pool_id = pool_entry_offset + vm_entry['guid']
+            
+            db.tri_world.upsert(
+                db.UpsertQuery('pool_template').values({
+                    'entry':pool_id,
+                    'max_limit': 1,
+                    'description': pool_name
+                })
+            )
+            
+            for tc_spawn in tc_pooled_guids:
+                #TODO there does appear to be an issue where, where the same GUID can occur in multiple pools
+                existing_pool_spawn = db.tri_world.select_one(
+                    db.SelectQuery('pool_members').where(
+                        db.GroupCondition('AND').condition('type', '=', 0).condition('spawnId', '=', tc_spawn)#.condition('poolSpawnId', '=', pool_id)
+                    )
+                )
+                
+                if(existing_pool_spawn == None):                    
+                    db.tri_world.upsert(
+                        db.UpsertQuery('pool_members').values({
+                            'type': 0,
+                            'spawnId': tc_spawn,
+                            'poolSpawnId': pool_id,
+                            'chance': 0,
+                            'description': 'Vmangos Inline'
+                        })
+                    )
+                
     
     import_creature_models()
 
-def _handle_import_entry_row(row):
+def _handle_import_entry_row(row, id, diff):
     global imported_entry_guids
-    
-    exact_match = db.tri_world.get_row_raw("SELECT guid, id FROM creature WHERE guid = %s AND id = %s", (row[0], row[1],))
+        
+    exact_match = db.tri_world.get_row_raw("SELECT guid, id FROM creature WHERE guid = %s AND id = %s", (row['guid'], id,))
     if exact_match != None:
-        _upsert_creature_entry(row[0], exact_match[0])
-        return 0
+        return _upsert_creature_entry(row['guid'], id, exact_match[0])
     
-    diff_sizes = [5, 10, 15, 20, 35, 50, 100]
-    for diff in diff_sizes:  
-        dest_ct_query = ("SELECT guid, id, map, position_x, position_y, position_z FROM creature "
-                        "WHERE id = %s "
-                        "AND position_x BETWEEN %s AND %s "
-                        "AND position_y BETWEEN %s AND %s "
-                        "AND map = %s")
-        
-        matches = db.tri_world.get_rows_raw(dest_ct_query, (
-                                row[1],
-                                row[3] - diff,
-                                row[3] + diff,
-                                row[4] - diff,
-                                row[4] + diff,
-                                row[2],
-                                )) 
-        
-        for match in matches:
-            if match[0] in imported_entry_guids:
-                matches.remove(match)
-        
-        matches_len = len(matches)
-        if(matches_len == 1):
-            _upsert_creature_entry(row[0], matches[0][0])
-            return 0
-        elif(matches_len > 1):
-            nearest_match = matches[0]
-            nearest_abs = abs(matches[0][3] - row[3]) + abs(matches[0][4] - row[4])
-
-            for near_match in matches:
-                next_abs = abs(near_match[3] - row[3]) + abs(near_match[4] - row[4])
-                if(next_abs < nearest_abs):
-                    nearest_match = near_match
-                    nearest_abs = next_abs
-            
-            _upsert_creature_entry(row[0], nearest_match[0])  
-            return 0
-        
-    guid_missing = db.tri_world.get_row_raw("SELECT guid, id FROM creature WHERE guid = %s", (row[0],))
+    guid_missing = db.tri_world.get_row_raw("SELECT guid, id FROM creature WHERE guid = %s", (row['guid'],))
     if guid_missing == None:
-        _upsert_creature_entry(row[0], 0 - row[0])
-        return 0
+        return _upsert_creature_entry(row['guid'], id, 0 - row['guid'])
     
-    _upsert_creature_entry(row[0])
-    return 0
+    if diff == -1:
+        return None
+    
+    cond = db.GroupCondition('AND').condition(
+        'id', '=', id
+    ).condition(
+        'map', '=', row['map']
+    ).condition(
+        'position_x', 'BETWEEN', [ row['position_x'] - diff, row['position_x'] + diff]
+    ).condition(
+        'position_y', 'BETWEEN', [ row['position_y'] - diff, row['position_y'] + diff]
+    )
+    
+    matches = db.tri_world.select_all(
+        db.SelectQuery("creature").select('guid, id, map, position_x, position_y, position_z').where(cond)
+    )
+
+    for match in matches:
+        if match['guid'] in imported_entry_guids:
+            matches.remove(match)
+        
+    if(len(matches) > 0):
+        nearest_match = matches[0]
+        nearest_abs = abs(nearest_match['position_x'] - row['position_x']) + abs(nearest_match['position_y'] - row['position_y'])
+
+        for near_match in matches:
+            next_abs = abs(near_match['position_x'] - row['position_x']) + abs(near_match['position_y'] - row['position_y'])
+            if(next_abs < nearest_abs):
+                nearest_match = near_match
+                nearest_abs = next_abs
+    
+        return _upsert_creature_entry(row['guid'], id, nearest_match['guid'])  
+    
+    return _upsert_creature_entry(row['guid'], id)
 
 def update_instance_info():
     for instance_id in constants.NormalMaps:
@@ -228,10 +316,29 @@ def _upsert_creature_template(vm_row, tri_row = None) :
     
     #TODO check missing fields, both TC and Vmangos.
     
-    type_flags = vm_row['type_flags']
+    type_flags = 0  #TODO check all flags.
+
+    if vm_row['static_flags1'] & 0x00000010:
+        type_flags = type_flags | 0x00000001       #CREATURE_TYPE_FLAG_TAMEABLE
+    
+    if vm_row['static_flags1'] & 0x00200000:
+        type_flags = type_flags | 0x00000002       #CREATURE_TYPE_FLAG_VISIBLE_TO_GHOSTS
+        
+    if vm_row['static_flags1'] & 0x00010000:
+        type_flags = type_flags | 0x00000004       #CREATURE_STATIC_FLAG_RAID_BOSS_MOB
+        
+    if vm_row['static_flags1'] & 0x00800000: 
+        type_flags = type_flags | 0x00000008       #CREATURE_TYPE_FLAG_DO_NOT_PLAY_WOUND_ANIM
+        
+    if vm_row['static_flags1'] & 0x01000000: 
+        type_flags = type_flags | 0x00000010       #CREATURE_TYPE_FLAG_NO_FACTION_TOOLTIP
+        
+    if vm_row['static_flags1'] & 0x40000000: 
+        type_flags = type_flags | 0x00000020       #CREATURE_TYPE_FLAG_MORE_AUDIBLE
+    
     if vm_row['gossip_menu_id'] > 0:
-        type_flags = type_flags | 0x08000000 #force gossip
-        #TODO handle other trinity type flags.
+        type_flags = type_flags | 0x08000000       #force gossip
+        
     
     creature_template_upsert = db.UpsertQuery("creature_template").values({
         'difficulty_entry_1': 0,
@@ -286,7 +393,7 @@ def _upsert_creature_template(vm_row, tri_row = None) :
         'RacialLeader': vm_row['racial_leader'],
         #'movementId'
         #'CreatureDifficultyID'
-        'RegenHealth': vm_row['regeneration'] > 0,
+        'RegenHealth': (vm_row['static_flags1'] & 0x00000400) != 1, #CREATURE_STATIC_FLAG_NO_AUTOMATIC_REGEN
         'Civilian': vm_row['civilian'],
         #'PetSpellDataId'
         #'mechanic_immune_mask': vm_row['mechanic_immune_mask'],
@@ -379,7 +486,7 @@ def _upsert_creature_template(vm_row, tri_row = None) :
             spell_index += 1
 
     
-def _upsert_creature_entry(vm_ce_guid, tri_ce_guid = None):
+def _upsert_creature_entry(vm_ce_guid, vm_ce_id, tri_ce_guid = None):
     global next_entry_guid
     
     vm_row = db.vm_world.select_one(
@@ -395,10 +502,10 @@ def _upsert_creature_entry(vm_ce_guid, tri_ce_guid = None):
     if tri_ce_guid == None:
         tri_ce_guid = next_entry_guid
         next_entry_guid += 1
-        db.tri_world.execute_raw("INSERT INTO creature (guid, id) VALUES (%s, %s)", (tri_ce_guid, vm_row['id'],))
+        db.tri_world.execute_raw("INSERT INTO creature (guid, id) VALUES (%s, %s)", (tri_ce_guid, vm_ce_id,))
     elif tri_ce_guid < 0:
         tri_ce_guid = abs(tri_ce_guid)
-        db.tri_world.execute_raw("INSERT INTO creature (guid, id) VALUES (%s, %s)", (tri_ce_guid, vm_row['id'],))
+        db.tri_world.execute_raw("INSERT INTO creature (guid, id) VALUES (%s, %s)", (tri_ce_guid, vm_ce_id,))
 
     # handle equipment
     tri_equip_id = 0
@@ -456,7 +563,7 @@ def _upsert_creature_entry(vm_ce_guid, tri_ce_guid = None):
         
     #TODO check all fields used.
     creature_upsert = db.UpsertQuery("creature").values({
-        'id': vm_row['id'],
+        'id': vm_ce_id,
         'map': vm_row['map'],
         #...
         'phaseId': 0, #TODO check
@@ -477,11 +584,10 @@ def _upsert_creature_entry(vm_ce_guid, tri_ce_guid = None):
 
 
     global imported_entry_guids
-    imported_entry_guids.append(tri_ce_guid)
+    imported_entry_guids[tri_ce_guid] = [vm_ce_guid, vm_ce_id]
     
     creature_upsert.where("guid", "=", tri_ce_guid)  
     db.tri_world.upsert(creature_upsert)
-
 
     # check if is an event creature.
     vm_event_row = db.vm_world.select_one(
@@ -500,6 +606,8 @@ def _upsert_creature_entry(vm_ce_guid, tri_ce_guid = None):
                     'guid': tri_ce_guid
                 })
             )
+            
+    return tri_ce_guid
     
 def import_creature_models():
     db.tri_world.execute_raw("DELETE FROM creature_model_info")

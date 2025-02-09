@@ -7,8 +7,10 @@ TRINITY_POOL_TYPE_CREATURE = 0
 TRINITY_POOL_TYPE_GAMEOJECT = 1
 TRINITY_POOL_TYPE_POOL = 2 
 
-def Import():
+def Clear():
     remove_old()
+
+def Import():
     handle_pool_templates()
     handle_pool_members()
     
@@ -44,9 +46,7 @@ def handle_pool_members():
     for vm_mp in vm_member_pools:
         _upsert_pool_member(TRINITY_POOL_TYPE_POOL, vm_mp['pool_id'], vm_mp['mother_pool'], vm_mp['chance'], vm_mp['description'])
     
-    
-    #TODO handle creature template and GO template pools.
-    
+    #Creature Pools
     vm_creature_pools = db.vm_world.select_chunked(
         db.SelectQuery("pool_creature").where('patch_max', '=', 10).order_by("guid ASC, pool_entry ASC"),
         250
@@ -55,8 +55,13 @@ def handle_pool_members():
     for vm_cp in vm_creature_pools:
         tri_guid = tri_closest('creature', vm_cp['guid'])
         if tri_guid:
-            _upsert_pool_member(TRINITY_POOL_TYPE_CREATURE, tri_guid, vm_cp['pool_entry'], vm_cp['chance'], vm_cp['description'])
+            inline_pool = check_inline_pool(TRINITY_POOL_TYPE_CREATURE, tri_guid)
+            if inline_pool:
+                _upsert_pool_member(TRINITY_POOL_TYPE_POOL, inline_pool, vm_cp['pool_entry'], vm_cp['chance'], vm_cp['description'])
+            else:
+                _upsert_pool_member(TRINITY_POOL_TYPE_CREATURE, tri_guid, vm_cp['pool_entry'], vm_cp['chance'], vm_cp['description'])
     
+    #GO Pools
     vm_go_pools = db.vm_world.select_chunked(
         db.SelectQuery("pool_gameobject").where('patch_max', '=', 10).order_by("guid ASC, pool_entry ASC"),
         250
@@ -66,7 +71,38 @@ def handle_pool_members():
         tri_guid = tri_closest('gameobject', vm_gp['guid'])
         if tri_guid:
             _upsert_pool_member(TRINITY_POOL_TYPE_GAMEOJECT, tri_guid, vm_gp['pool_entry'], vm_gp['chance'], vm_gp['description'])
-
+                
+                
+    #Creature Template pools
+    vm_creature_pools = db.vm_world.select_chunked(
+        db.SelectQuery("pool_creature_template").where('patch_max', '=', 10).order_by("id ASC, pool_entry ASC"),
+        250
+    )
+    
+    for vm_ctp in vm_creature_pools:
+        guids = db.tri_world.select_all(
+            db.SelectQuery('creature').select('guid').where('id', '=', vm_ctp['id'])
+        )
+        for tri_guid in guids:
+            inline_pool = check_inline_pool(TRINITY_POOL_TYPE_CREATURE, tri_guid['guid'])
+            if inline_pool:
+                _upsert_pool_member(TRINITY_POOL_TYPE_POOL, inline_pool, vm_ctp['pool_entry'], vm_ctp['chance'], vm_ctp['description'])
+            else:
+                _upsert_pool_member(TRINITY_POOL_TYPE_CREATURE, tri_guid['guid'], vm_ctp['pool_entry'], vm_ctp['chance'], vm_ctp['description'])
+        
+    
+    #GO Template pools
+    vm_go_pools = db.vm_world.select_chunked(
+        db.SelectQuery("pool_gameobject_template").where('patch_max', '=', 10).order_by("id ASC, pool_entry ASC"),
+        250
+    )
+    
+    for vm_gtp in vm_go_pools:
+        guids = db.tri_world.select_all(
+            db.SelectQuery('gameobject').select('guid').where('id', '=', vm_gtp['id'])
+        )
+        for tri_guid in guids:
+            _upsert_pool_member(TRINITY_POOL_TYPE_GAMEOJECT, tri_guid['guid'], vm_gtp['pool_entry'], vm_gtp['chance'], vm_gtp['description'])
     
             
 def _upsert_pool_member(type, spawn_id, pool_spawn_id, chance, desc):   
@@ -98,6 +134,17 @@ def _upsert_pool_member(type, spawn_id, pool_spawn_id, chance, desc):
             )
         )
 
+def check_inline_pool(type, entry):
+    tri_row = db.tri_world.select_one(
+        db.SelectQuery('pool_members').where(
+            db.GroupCondition('AND').condition('type', '=', type).condition('spawnId', '=', entry).condition('description', 'LIKE', '%Vmangos Inline%')
+        )
+    )
+    
+    if tri_row:
+        return tri_row['poolSpawnId']
+
+    return None
 
 def tri_closest(table, vm_guid):
     vm_row = db.vm_world.select_one(

@@ -33,6 +33,9 @@ db.OpenAll()
 print("Misc...")
 importer.misc.Import()
 
+print("Pools (clear)...")
+importer.pool.Clear()
+
 print("Events...")
 importer.event.Import()
 
@@ -54,8 +57,8 @@ importer.gameobject.Import()
 print("gossips...")
 importer.gossip.Import()
 
-# print("graveyards...")
-# importer.graveyard.Import()
+print("graveyards...")
+importer.graveyard.Import()
 
 print("Items...")
 importer.item.Import()
