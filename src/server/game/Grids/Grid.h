@@ -19,18 +19,18 @@
 #define TRINITY_GRID_H
 
 /*
-  @class Grid
-  Grid is a logical segment of the game world represented inside TrinIty.
-  Grid is bind at compile time to a particular type of object which
-  we call it the object of interested.  There are many types of loader,
-  specially, dynamic loader, static loader, or on-demand loader.  There's
-  a subtle difference between dynamic loader and on-demand loader but
-  this is implementation specific to the loader class.  From the
-  Grid's perspective, the loader meets its API requirement is suffice.
+    @class Grid
+    Grid is a logical segment of the game world represented inside TrinIty.
+    Grid is bind at compile time to a particular type of object which
+    we call it the object of interested.  There are many types of loader,
+    specially, dynamic loader, static loader, or on-demand loader.  There's
+    a subtle difference between dynamic loader and on-demand loader but
+    this is implementation specific to the loader class.  From the
+    Grid's perspective, the loader meets its API requirement is suffice.
 */
 
 #include "Define.h"
-#include "TypeContainer.h"
+#include "Errors.h"
 #include "TypeContainerVisitor.h"
 
 // forward declaration
@@ -49,7 +49,7 @@ class Grid
     public:
 
         /** destructor to clean up its resources. This includes unloading the
-        grid if it has not been unload.
+     grid if it has not been unload.
         */
         ~Grid() { }
 
@@ -57,7 +57,7 @@ class Grid
          */
         template<class SPECIFIC_OBJECT> void AddWorldObject(SPECIFIC_OBJECT *obj)
         {
-            i_objects.template insert<SPECIFIC_OBJECT>(obj);
+            i_objects.template Insert<SPECIFIC_OBJECT>(obj);
             ASSERT(obj->IsInGrid());
         }
 
@@ -103,14 +103,14 @@ class Grid
         template<class T>
         uint32 GetWorldObjectCountInGrid() const
         {
-            return uint32(i_objects.template Count<T>());
+            return uint32(i_objects.template Size<T>());
         }
 
         /** Inserts a container type object into the grid.
          */
         template<class SPECIFIC_OBJECT> void AddGridObject(SPECIFIC_OBJECT *obj)
         {
-            i_container.template insert<SPECIFIC_OBJECT>(obj);
+            i_container.template Insert<SPECIFIC_OBJECT>(obj);
             ASSERT(obj->IsInGrid());
         }
 
@@ -139,4 +139,5 @@ class Grid
         //typedef std::set<void*> ActiveGridObjects;
         //ActiveGridObjects m_activeGridObjects;
 };
+
 #endif

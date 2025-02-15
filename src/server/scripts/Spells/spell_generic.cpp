@@ -1471,35 +1471,6 @@ class spell_gen_ds_flush_knockback : public SpellScript
     }
 };
 
-class spell_gen_dungeon_credit : public SpellScript
-{
-    PrepareSpellScript(spell_gen_dungeon_credit);
-
-    bool Load() override
-    {
-        return GetCaster()->GetTypeId() == TYPEID_UNIT;
-    }
-
-    void CreditEncounter()
-    {
-        // This hook is executed for every target, make sure we only credit instance once
-        if (_handled)
-            return;
-
-        _handled = true;
-        Unit* caster = GetCaster();
-        if (InstanceScript* instance = caster->GetInstanceScript())
-            instance->UpdateEncounterStateForSpellCast(GetSpellInfo()->Id, caster);
-    }
-
-    void Register() override
-    {
-        AfterHit += SpellHitFn(spell_gen_dungeon_credit::CreditEncounter);
-    }
-
-    bool _handled = false;
-};
-
 // 50051 - Ethereal Pet Aura
 enum EtherealPet
 {
@@ -4987,7 +4958,7 @@ class spell_summon_battle_pet : public SpellScript
 
             Unit* caster = GetCaster();
             SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(uint32(GetEffectInfo().MiscValueB));
-            uint32 duration = uint32(GetSpellInfo()->CalcDuration(caster));
+            Milliseconds duration = Milliseconds(GetSpellInfo()->CalcDuration(caster));
             Position pos = GetHitDest()->GetPosition();
 
             if (Creature* summon = caster->GetMap()->SummonCreature(creatureId, pos, properties, duration, caster, GetSpellInfo()->Id))
@@ -5135,7 +5106,6 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_despawn_target);
     RegisterSpellScript(spell_gen_divine_storm_cd_reset);
     RegisterSpellScript(spell_gen_ds_flush_knockback);
-    RegisterSpellScript(spell_gen_dungeon_credit);
     RegisterSpellScript(spell_ethereal_pet_aura);
     RegisterSpellScript(spell_ethereal_pet_onsummon);
     RegisterSpellScript(spell_ethereal_pet_aura_remove);

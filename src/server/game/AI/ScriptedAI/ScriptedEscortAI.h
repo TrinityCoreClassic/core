@@ -27,75 +27,74 @@ class Quest;
 
 enum EscortState : uint32
 {
-    STATE_ESCORT_NONE       = 0x00, // nothing in progress
-    STATE_ESCORT_ESCORTING  = 0x01, // escort is in progress
-    STATE_ESCORT_RETURNING  = 0x02, // escort is returning after being in combat
-    STATE_ESCORT_PAUSED     = 0x04  // escort is paused, wont continue with next waypoint
+    STATE_ESCORT_NONE = 0x00, // nothing in progress
+    STATE_ESCORT_ESCORTING = 0x01, // escort is in progress
+    STATE_ESCORT_RETURNING = 0x02, // escort is returning after being in combat
+    STATE_ESCORT_PAUSED = 0x04  // escort is paused, wont continue with next waypoint
 };
 
 struct TC_GAME_API EscortAI : public ScriptedAI
 {
-    public:
-        explicit EscortAI(Creature* creature);
-        ~EscortAI() { }
+public:
+    explicit EscortAI(Creature* creature);
+    ~EscortAI() {}
 
-        void InitializeAI() override;
-        void MoveInLineOfSight(Unit* who) override;
-        void JustDied(Unit*) override;
-        void ReturnToLastPoint();
-        void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override;
-        void MovementInform(uint32, uint32) override;
-        void UpdateAI(uint32 diff) override; // the "internal" update, calls UpdateEscortAI()
+    void InitializeAI() override;
+    void MoveInLineOfSight(Unit* who) override;
+    void JustDied(Unit*) override;
+    void ReturnToLastPoint();
+    void EnterEvadeMode(EvadeReason why) override;
+    void MovementInform(uint32, uint32) override;
+    void UpdateAI(uint32 diff) override; // the "internal" update, calls UpdateEscortAI()
 
-        virtual void UpdateEscortAI(uint32 diff); // used when it's needed to add code in update (abilities, scripted events, etc)
-        void AddWaypoint(uint32 id, float x, float y, float z, float orientation = 0.f, Milliseconds waitTime = 0s);
-        void Start(bool isActiveAttacker = true, bool run = false, ObjectGuid playerGUID = ObjectGuid::Empty, Quest const* quest = nullptr, bool instantRespawn = false, bool canLoopPath = false, bool resetWaypoints = true);
+    virtual void UpdateEscortAI(uint32 diff); // used when it's needed to add code in update (abilities, scripted events, etc)
+    void AddWaypoint(uint32 id, float x, float y, float z, bool run);
+    void AddWaypoint(uint32 id, float x, float y, float z, float orientation = 0.f, Optional<Milliseconds> waitTime = {}, bool run = false);
+    void ResetPath();
+    void LoadPath(uint32 pathId);
+    void Start(bool isActiveAttacker = true, ObjectGuid playerGUID = ObjectGuid::Empty, Quest const* quest = nullptr, bool instantRespawn = false, bool canLoopPath = false);
 
-        void SetRun(bool on = true);
-        void SetEscortPaused(bool on);
-        void SetPauseTimer(Milliseconds timer) { _pauseTimer = timer; }
-        bool HasEscortState(uint32 escortState) { return (_escortState & escortState) != 0; }
-        bool IsEscorted() const override { return !_playerGUID.IsEmpty(); }
-        void SetMaxPlayerDistance(float newMax) { _maxPlayerDistance = newMax; }
-        float GetMaxPlayerDistance() const { return _maxPlayerDistance; }
-        void SetDespawnAtEnd(bool despawn) { _despawnAtEnd = despawn; }
-        void SetDespawnAtFar(bool despawn) { _despawnAtFar = despawn; }
-        bool IsActiveAttacker() const { return _activeAttacker; } // obsolete
-        void SetActiveAttacker(bool enable) { _activeAttacker = enable; }
-        ObjectGuid GetEventStarterGUID() const { return _playerGUID; }
+    void SetEscortPaused(bool on);
+    void SetPauseTimer(Milliseconds timer) { _pauseTimer = timer; }
+    bool HasEscortState(uint32 escortState) { return (_escortState & escortState) != 0; }
+    bool IsEscorted() const override { return !_playerGUID.IsEmpty(); }
+    void SetMaxPlayerDistance(float newMax) { _maxPlayerDistance = newMax; }
+    float GetMaxPlayerDistance() const { return _maxPlayerDistance; }
+    void SetDespawnAtEnd(bool despawn) { _despawnAtEnd = despawn; }
+    void SetDespawnAtFar(bool despawn) { _despawnAtFar = despawn; }
+    bool IsActiveAttacker() const { return _activeAttacker; } // obsolete
+    void SetActiveAttacker(bool enable) { _activeAttacker = enable; }
+    ObjectGuid GetEventStarterGUID() const { return _playerGUID; }
 
-    protected:
-        Player* GetPlayerForEscort();
+protected:
+    Player* GetPlayerForEscort();
 
-    private:
-        bool AssistPlayerInCombatAgainst(Unit* who);
-        bool IsPlayerOrGroupInRange();
-        void FillPointMovementListForCreature();
+private:
+    bool AssistPlayerInCombatAgainst(Unit* who);
+    bool IsPlayerOrGroupInRange();
 
-        void AddEscortState(uint32 escortState) { _escortState |= escortState; }
-        void RemoveEscortState(uint32 escortState) { _escortState &= ~escortState; }
+    void AddEscortState(uint32 escortState) { _escortState |= escortState; }
+    void RemoveEscortState(uint32 escortState) { _escortState &= ~escortState; }
 
-        ObjectGuid _playerGUID;
-        Milliseconds _pauseTimer;
-        uint32 _playerCheckTimer;
-        uint32 _escortState;
-        float _maxPlayerDistance;
+    ObjectGuid _playerGUID;
+    Milliseconds _pauseTimer;
+    uint32 _playerCheckTimer;
+    uint32 _escortState;
+    float _maxPlayerDistance;
 
-        Quest const* _escortQuest; // generally passed in Start() when regular escort script.
+    Quest const* _escortQuest; // generally passed in Start() when regular escort script.
 
-        WaypointPath _path;
+    WaypointPath _path;
 
-        bool _activeAttacker;      // obsolete, determined by faction.
-        bool _running;             // all creatures are walking by default (has flag MOVEMENTFLAG_WALK)
-        bool _instantRespawn;      // if creature should respawn instantly after escort over (if not, database respawntime are used)
-        bool _returnToStart;       // if creature can walk same path (loop) without despawn. Not for regular escort quests.
-        bool _despawnAtEnd;
-        bool _despawnAtFar;
-        bool _manualPath;
-        bool _hasImmuneToNPCFlags;
-        bool _started;
-        bool _ended;
-        bool _resume;
+    bool _activeAttacker;      // obsolete, determined by faction.
+    bool _instantRespawn;      // if creature should respawn instantly after escort over (if not, database respawntime are used)
+    bool _returnToStart;       // if creature can walk same path (loop) without despawn. Not for regular escort quests.
+    bool _despawnAtEnd;
+    bool _despawnAtFar;
+    bool _hasImmuneToNPCFlags;
+    bool _started;
+    bool _ended;
+    bool _resume;
 };
 
 #endif

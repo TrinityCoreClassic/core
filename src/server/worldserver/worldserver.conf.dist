@@ -332,6 +332,15 @@ BaseMapLoadAllGrids = 0
 InstanceMapLoadAllGrids = 0
 
 #
+#    BattlegroundMapLoadAllGrids
+#        Description: Load all grids for battleground maps upon load.
+#                     Upon loading an battleground map, all creatures/objects in the map will be pre-loaded
+#        Default:     1 - (Preload all grids in the instance upon load)
+#                     0 - (Don't preload all base maps, dynamically load as used)
+
+BattlegroundMapLoadAllGrids = 1
+
+#
 #    SocketTimeOutTime
 #        Description: Time (in milliseconds) after which a connection being idle on the character
 #                     selection screen is disconnected.
@@ -1001,14 +1010,6 @@ Instance.IgnoreLevel = 0
 Instance.IgnoreRaid = 0
 
 #
-#    Instance.ResetTimeHour
-#        Description: Hour of the day when the global instance reset occurs.
-#        Range:       0-23
-#        Default:     4 - (04:00 AM)
-
-Instance.ResetTimeHour = 4
-
-#
 #    Instance.UnloadDelay
 #        Description: Time (in milliseconds) before instance maps are unloaded from memory if no
 #                     characters are inside.
@@ -1025,6 +1026,22 @@ Instance.UnloadDelay = 1800000
 #                     true  - (Enabled, show)
 
 InstancesResetAnnounce = false
+
+#
+#    ResetSchedule.WeekDay
+#        Description: Day of the week when the global weekly reset occurs.
+#        Range:       0-6
+#        Default:     2 - (Tuesday)
+
+ResetSchedule.WeekDay = 2
+
+#
+#    ResetSchedule.Hour
+#        Description: Hour of the day when the global daily reset occurs.
+#        Range:       0-23
+#        Default:     8 - (08:00 AM)
+
+ResetSchedule.Hour = 8
 
 #
 #    Quests.EnableQuestTracker

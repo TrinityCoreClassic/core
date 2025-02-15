@@ -208,7 +208,7 @@ public:
             }
 
             if (uiType <= 3)
-                Start(false, true);
+                Start(false);
         }
 
         void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override

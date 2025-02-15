@@ -370,7 +370,7 @@ class boss_flame_leviathan : public CreatureScript
 
                 if (!me->IsInCombat())
                 {
-                    EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
+                    EnterEvadeMode(EvadeReason::NoHostiles);
                     return;
                 }
 
@@ -1030,7 +1030,7 @@ public:
             EscortAI::UpdateAI(diff);
 
             if (!HasEscortState(STATE_ESCORT_ESCORTING))
-                Start(false, true, ObjectGuid::Empty, nullptr, false, true);
+                Start(false, ObjectGuid::Empty, nullptr, false, true);
             else
             {
                 if (infernoTimer <= diff)
@@ -1688,7 +1688,7 @@ class spell_pursue : public SpellScriptLoader
                 {
                     if (Unit* caster = GetCaster())
                         if (Creature* cCaster = caster->ToCreature())
-                            cCaster->AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+                            cCaster->AI()->EnterEvadeMode(EvadeReason::NoHostiles);
                 }
                 else
                     _target = targets.front();

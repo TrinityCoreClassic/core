@@ -27,12 +27,12 @@
 
 DoorData const doorData[] =
 {
-    { GO_GAL_DARAH_DOOR_1,              DATA_GAL_DARAH,         DOOR_TYPE_PASSAGE },
-    { GO_GAL_DARAH_DOOR_2,              DATA_GAL_DARAH,         DOOR_TYPE_PASSAGE },
-    { GO_GAL_DARAH_DOOR_3,              DATA_GAL_DARAH,         DOOR_TYPE_ROOM    },
-    { GO_ECK_THE_FEROCIOUS_DOOR,        DATA_MOORABI,           DOOR_TYPE_PASSAGE },
-    { GO_ECK_THE_FEROCIOUS_DOOR_BEHIND, DATA_ECK_THE_FEROCIOUS, DOOR_TYPE_PASSAGE },
-    { 0,                                0,                      DOOR_TYPE_ROOM    } // END
+    { GO_GAL_DARAH_DOOR_1,              DATA_GAL_DARAH,         EncounterDoorBehavior::OpenWhenDone },
+    { GO_GAL_DARAH_DOOR_2,              DATA_GAL_DARAH,         EncounterDoorBehavior::OpenWhenDone },
+    { GO_GAL_DARAH_DOOR_3,              DATA_GAL_DARAH,         EncounterDoorBehavior::OpenWhenNotInProgress    },
+    { GO_ECK_THE_FEROCIOUS_DOOR,        DATA_MOORABI,           EncounterDoorBehavior::OpenWhenDone },
+    { GO_ECK_THE_FEROCIOUS_DOOR_BEHIND, DATA_ECK_THE_FEROCIOUS, EncounterDoorBehavior::OpenWhenDone },
+    { 0,                                0,                      EncounterDoorBehavior::OpenWhenNotInProgress    } // END
 };
 
 ObjectData const creatureData[] =
@@ -242,25 +242,14 @@ class instance_gundrak : public InstanceMapScript
                 }
             }
 
-            void WriteSaveDataMore(std::ostringstream& data) override
+            void AfterDataLoad() override
             {
-                data << uint32(SladRanStatueState) << ' ';
-                data << uint32(DrakkariColossusStatueState) << ' ';
-                data << uint32(MoorabiStatueState) << ' ';
-            }
-
-            void ReadSaveDataMore(std::istringstream& data) override
-            {
-                uint32 temp;
-
-                data >> temp;
-                SladRanStatueState = GOState(temp);
-
-                data >> temp;
-                DrakkariColossusStatueState = GOState(temp);
-
-                data >> temp;
-                MoorabiStatueState = GOState(temp);
+                if (GetBossState(DATA_SLAD_RAN) == DONE)
+                    SladRanStatueState = GO_STATE_DESTROYED;
+                if (GetBossState(DATA_DRAKKARI_COLOSSUS) == DONE)
+                    DrakkariColossusStatueState = GO_STATE_DESTROYED;
+                if (GetBossState(DATA_MOORABI) == DONE)
+                    MoorabiStatueState = GO_STATE_DESTROYED;
 
                 if (IsBridgeReady())
                     Events.ScheduleEvent(DATA_BRIDGE, TIMER_STATUE_ACTIVATION);
@@ -314,7 +303,6 @@ class instance_gundrak : public InstanceMapScript
                                 ToggleGameObject(type, GO_STATE_DESTROYED);
                             ToggleGameObject(DATA_TRAPDOOR, GO_STATE_READY);
                             ToggleGameObject(DATA_COLLISION, GO_STATE_ACTIVE);
-                            SaveToDB();
                             return;
                         default:
                             return;
@@ -330,7 +318,6 @@ class instance_gundrak : public InstanceMapScript
                     if (IsBridgeReady())
                         Events.ScheduleEvent(DATA_BRIDGE, TIMER_STATUE_ACTIVATION);
 
-                    SaveToDB();
                 }
             }
 

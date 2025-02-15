@@ -29,8 +29,8 @@
 
 DoorData const doorData[] =
 {
-    { GO_DRAGON_CAGE_DOOR,  DATA_DRAKOS,    DOOR_TYPE_PASSAGE },
-    { 0,                    0,              DOOR_TYPE_ROOM }
+    { GO_DRAGON_CAGE_DOOR,  DATA_DRAKOS,    EncounterDoorBehavior::OpenWhenDone },
+    { 0,                    0,              EncounterDoorBehavior::OpenWhenNotInProgress }
 };
 
 Position const VerdisaMove       = { 949.188f, 1032.91f, 359.967f, 1.093027f  };

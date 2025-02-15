@@ -146,7 +146,6 @@ class instance_zulaman : public InstanceMapScript
                             events.ScheduleEvent(EVENT_UPDATE_ZULAMAN_TIMER, 1min);
                             SpeedRunTimer = 15;
                             ZulAmanState = data;
-                            SaveToDB();
                         }
                         break;
                     }
@@ -240,7 +239,6 @@ class instance_zulaman : public InstanceMapScript
                     switch (eventId)
                     {
                         case EVENT_UPDATE_ZULAMAN_TIMER:
-                            SaveToDB();
                             DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER, --SpeedRunTimer);
                             if (SpeedRunTimer)
                                 events.ScheduleEvent(EVENT_UPDATE_ZULAMAN_TIMER, 1min);
@@ -257,24 +255,13 @@ class instance_zulaman : public InstanceMapScript
                 }
             }
 
-            void WriteSaveDataMore(std::ostringstream& data) override
+            void AfterDataLoad() override
             {
-                data << ZulAmanState  << ' '
-                     << SpeedRunTimer << ' '
-                     << ZulAmanBossCount;
-            }
-
-            void ReadSaveDataMore(std::istringstream& data) override
-            {
-                data >> ZulAmanState;
-                data >> SpeedRunTimer;
-                data >> ZulAmanBossCount;
-
-                if (ZulAmanState == IN_PROGRESS && SpeedRunTimer && SpeedRunTimer <= 15)
+                // Speed run cannot be resumed after reset/crash
+                if (ZulAmanState != NOT_STARTED)
                 {
-                    events.ScheduleEvent(EVENT_UPDATE_ZULAMAN_TIMER, 1min);
-                    DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER_ENABLED, 1);
-                    DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER, SpeedRunTimer);
+                    SpeedRunTimer = 0;
+                    ZulAmanState = FAIL;
                 }
             }
 

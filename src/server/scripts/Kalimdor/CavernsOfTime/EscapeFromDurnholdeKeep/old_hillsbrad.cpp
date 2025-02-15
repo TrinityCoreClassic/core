@@ -222,7 +222,6 @@ public:
             switch (waypointId)
             {
                 case 8:
-                    SetRun(false);
                     me->SummonCreature(18764, 2181.87f, 112.46f, 89.45f, 0.26f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s);
                     break;
                 case 9:
@@ -238,7 +237,6 @@ public:
                     me->SetDisplayId(THRALL_MODEL_EQUIPPED);
                     break;
                 case 11:
-                    SetRun();
                     break;
                 case 15:
                     me->SummonCreature(NPC_RIFLE, 2200.28f, 137.37f, 87.93f, 5.07f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s);
@@ -266,12 +264,10 @@ public:
                 case 30:
                     SetEscortPaused(true);
                     me->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP);
-                    SetRun(false);
                     break;
                 case 31:
                     Talk(SAY_TH_MOUNTS_UP);
                     DoMount();
-                    SetRun();
                     break;
                 case 37:
                     //possibly regular patrollers? If so, remove this and let database handle them
@@ -283,7 +279,6 @@ public:
                     me->SummonCreature(SKARLOC_MOUNT, 2488.64f, 625.77f, 58.26f, 4.71f, TEMPSUMMON_TIMED_DESPAWN, 10s);
                     DoUnmount();
                     HadMount = false;
-                    SetRun(false);
                     break;
                 case 60:
                     me->HandleEmoteCommand(EMOTE_ONESHOT_EXCLAMATION);
@@ -291,10 +286,8 @@ public:
                     SetEscortPaused(true);
                     me->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP);
                     instance->SetData(TYPE_THRALL_PART2, DONE);
-                    SetRun();
                     break;
                 case 64:
-                    SetRun(false);
                     break;
                 case 68:
                     me->SummonCreature(NPC_BARN_PROTECTOR, 2500.22f, 692.60f, 55.50f, 2.84f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s);
@@ -303,10 +296,8 @@ public:
                     me->SummonCreature(NPC_BARN_GUARDSMAN, 2500.94f, 695.81f, 55.50f, 3.14f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s);
                     break;
                 case 71:
-                    SetRun();
                     break;
                 case 81:
-                    SetRun(false);
                     break;
                 case 83:
                     me->SummonCreature(NPC_CHURCH_PROTECTOR, 2627.33f, 646.82f, 56.03f, 4.28f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 5s);
@@ -316,11 +307,9 @@ public:
                     break;
                 case 84:
                     Talk(SAY_TH_CHURCH_END);
-                    SetRun();
                     break;
                 case 91:
                     me->SetWalk(true);
-                    SetRun(false);
                     break;
                 case 93:
                     me->SummonCreature(NPC_INN_PROTECTOR, 2652.71f, 660.31f, 61.93f, 1.67f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s);
@@ -342,7 +331,6 @@ public:
                     break;
                 case 97:
                     Talk(SAY_TH_EPOCH_KILL_TARETHA);
-                    SetRun();
                     break;
                 case 98:
                     //trigger epoch Yell("Thrall! Come outside and face your fate! ....")
@@ -354,7 +342,7 @@ public:
                         if (Creature* Taretha = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_TARETHA)))
                         {
                             if (Player* player = GetPlayerForEscort())
-                                ENSURE_AI(EscortAI, (Taretha->AI()))->Start(false, true, player->GetGUID());
+                                ENSURE_AI(EscortAI, (Taretha->AI()))->Start(false, player->GetGUID());
                         }
 
                         //kill credit Creature for quest
@@ -481,7 +469,7 @@ public:
 
                     Talk(SAY_TH_START_EVENT_PART1);
 
-                    Start(true, true, player->GetGUID());
+                    Start(true, player->GetGUID());
 
                     SetMaxPlayerDistance(100.0f);//not really needed, because it will not despawn if player is too far
                     SetDespawnAtEnd(false);

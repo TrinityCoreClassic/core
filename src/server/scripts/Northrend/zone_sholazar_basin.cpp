@@ -104,7 +104,7 @@ struct npc_engineer_helice : public EscortAI
         {
             me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_PASSIVE);
 
-            Start(false, false, player->GetGUID());
+            Start(false, player->GetGUID());
             Talk(SAY_WP_1);
         }
     }

@@ -133,7 +133,7 @@ public:
         {
             if (gossipListId == 0)
             {
-                Start(true, false, player->GetGUID());
+                Start(true, player->GetGUID());
 
                 me->SetFaction(player->GetFaction());
                 SetData(1, 0);

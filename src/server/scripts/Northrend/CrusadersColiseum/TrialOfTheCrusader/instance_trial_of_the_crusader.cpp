@@ -84,13 +84,13 @@ ObjectData const gameObjectData[] =
 
 DoorData const doorData[] =
 {
-    { GO_EAST_PORTCULLIS, DATA_NORTHREND_BEASTS,  DOOR_TYPE_ROOM },
-    { GO_EAST_PORTCULLIS, DATA_JARAXXUS,          DOOR_TYPE_ROOM },
-    { GO_EAST_PORTCULLIS, DATA_FACTION_CRUSADERS, DOOR_TYPE_ROOM },
-    { GO_EAST_PORTCULLIS, DATA_TWIN_VALKIRIES,    DOOR_TYPE_ROOM },
-    { GO_EAST_PORTCULLIS, DATA_LICH_KING,         DOOR_TYPE_ROOM },
-    { GO_WEB_DOOR,        DATA_ANUBARAK,          DOOR_TYPE_ROOM },
-    { 0,                  0,                      DOOR_TYPE_ROOM } // END
+    { GO_EAST_PORTCULLIS, DATA_NORTHREND_BEASTS,  EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_EAST_PORTCULLIS, DATA_JARAXXUS,          EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_EAST_PORTCULLIS, DATA_FACTION_CRUSADERS, EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_EAST_PORTCULLIS, DATA_TWIN_VALKIRIES,    EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_EAST_PORTCULLIS, DATA_LICH_KING,         EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_WEB_DOOR,        DATA_ANUBARAK,          EncounterDoorBehavior::OpenWhenNotInProgress },
+    { 0,                  0,                      EncounterDoorBehavior::OpenWhenNotInProgress } // END
 };
 
 class instance_trial_of_the_crusader : public InstanceMapScript
@@ -314,8 +314,6 @@ class instance_trial_of_the_crusader : public InstanceMapScript
                         state = NOT_STARTED;
                     }
 
-                    if (state == DONE || NeedSave)
-                        Save();
                 }
                 return true;
             }
@@ -561,60 +559,6 @@ class instance_trial_of_the_crusader : public InstanceMapScript
                     else
                         ResilienceWillFixItTimer -= diff;
                 }
-            }
-
-            void Save()
-            {
-                OUT_SAVE_INST_DATA;
-
-                std::ostringstream saveStream;
-
-                for (uint8 i = 0; i < EncounterCount; ++i)
-                    saveStream << GetBossState(i) << ' ';
-
-                saveStream << TrialCounter << ' '
-                    << PlayerDeathCount << ' '
-                    << uint32(TributeToDedicatedInsanity ? 1 : 0);
-                SaveDataBuffer = saveStream.str();
-
-                SaveToDB();
-                OUT_SAVE_INST_DATA_COMPLETE;
-                NeedSave = false;
-            }
-
-            std::string GetSaveData() override
-            {
-                return SaveDataBuffer;
-            }
-
-            void Load(char const* strIn) override
-            {
-                if (!strIn)
-                {
-                    OUT_LOAD_INST_DATA_FAIL;
-                    return;
-                }
-
-                OUT_LOAD_INST_DATA(strIn);
-
-                std::istringstream loadStream(strIn);
-
-                uint32 tmpState;
-                for (uint8 i = 0; i < EncounterCount; ++i)
-                {
-                    loadStream >> tmpState;
-                    if (tmpState == IN_PROGRESS || tmpState > SPECIAL)
-                        tmpState = NOT_STARTED;
-                    SetBossState(i, EncounterState(tmpState));
-                }
-
-                loadStream >> TrialCounter;
-                loadStream >> PlayerDeathCount;
-                loadStream >> tmpState;
-                TributeToDedicatedInsanity = tmpState != 0;
-                EventStage = 0;
-
-                OUT_LOAD_INST_DATA_COMPLETE;
             }
 
             bool CheckAchievementCriteriaMeet(uint32 criteria_id, Player const* /*source*/, Unit const* /*target*/, uint32 /*miscvalue1*/) override

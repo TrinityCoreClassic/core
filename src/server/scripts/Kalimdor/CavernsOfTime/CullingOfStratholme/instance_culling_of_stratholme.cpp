@@ -123,9 +123,9 @@ enum COSMisc
 
 DoorData const doorData[] =
 {
-    { GO_MALGANIS_GATE_2, DATA_MAL_GANIS, DOOR_TYPE_ROOM },
-    { GO_EXIT_GATE,       DATA_MAL_GANIS, DOOR_TYPE_PASSAGE },
-    { 0,                  0,              DOOR_TYPE_ROOM } // END
+    { GO_MALGANIS_GATE_2, DATA_MAL_GANIS, EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_EXIT_GATE,       DATA_MAL_GANIS, EncounterDoorBehavior::OpenWhenDone },
+    { 0,                  0,              EncounterDoorBehavior::OpenWhenNotInProgress } // END
 };
 
 COSProgressStates GetStableStateFor(COSProgressStates const state)
@@ -275,30 +275,19 @@ class instance_culling_of_stratholme : public InstanceMapScript
                 _plagueCrates.reserve(NUM_PLAGUE_CRATES);
             }
 
-            void WriteSaveDataMore(std::ostringstream& data) override
+            void AfterDataLoad() override
             {
-                data << _currentState << ' ' << _infiniteGuardianTimeout;
-            }
-
-            void ReadSaveDataMore(std::istringstream& data) override
-            {
-                // read current instance progress from save data, then regress to the previous stable state
-                uint32 state = JUST_STARTED;
-                time_t infiniteGuardianTime = 0;
-                data >> state;
-                data >> infiniteGuardianTime; // UNIX timestamp
-
-                COSProgressStates loadState = GetStableStateFor(COSProgressStates(state));
+                COSProgressStates loadState = GetStableStateFor(_currentState);
                 SetInstanceProgress(loadState, true);
 
-                if (infiniteGuardianTime)
+                if (_infiniteGuardianTimeout)
                 {
-                    _infiniteGuardianTimeout = infiniteGuardianTime;
+                    _infiniteGuardianTimeout = _infiniteGuardianTimeout;
                     events.ScheduleEvent(EVENT_GUARDIAN_TICK, 0s);
                 }
 
-                time_t timediff = (infiniteGuardianTime - GameTime::GetGameTime());
-                if (!infiniteGuardianTime)
+                time_t timediff = (_infiniteGuardianTimeout - GameTime::GetGameTime());
+                if (!_infiniteGuardianTimeout)
                     timediff = -1;
 
                 TC_LOG_DEBUG("scripts.cos", "instance_culling_of_stratholme::ReadSaveDataMore: Loaded with state {} and guardian timeout at {}u minutes {}u seconds from now", (uint32)loadState, timediff / MINUTE, timediff % MINUTE);
@@ -730,7 +719,7 @@ class instance_culling_of_stratholme : public InstanceMapScript
                     // Reset respawn time on all permanent spawns, despawn all temporary spawns
                     // @todo dynspawn, this won't work
                     std::vector<Creature*> toDespawn;
-                    std::unordered_map<ObjectGuid, Creature*> const& objects = instance->GetObjectsStore().GetElements()._elements._element;
+                    std::unordered_map<ObjectGuid, Creature*> const& objects = instance->GetObjectsStore().Data.Head;
                     for (std::unordered_map<ObjectGuid, Creature*>::const_iterator itr = objects.cbegin(); itr != objects.cend(); ++itr)
                     {
                         if (itr->second && (itr->second->isDead() || !itr->second->GetSpawnId() || itr->second->GetOriginalEntry() != itr->second->GetEntry()))
@@ -753,7 +742,6 @@ class instance_culling_of_stratholme : public InstanceMapScript
                     events.RescheduleEvent(EVENT_RESPAWN_ARTHAS, 1s);
                 }
 
-                SaveToDB();
             }
 
         private:

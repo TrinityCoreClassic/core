@@ -294,7 +294,6 @@ class instance_serpent_shrine : public InstanceMapScript
                     case DATA_TRASH:
                         if (data == 1 && TrashCount < MIN_KILLS)
                             ++TrashCount;//+1 died
-                        SaveToDB();
                         break;
                     case DATA_WATER:
                         Water = data;
@@ -340,9 +339,6 @@ class instance_serpent_shrine : public InstanceMapScript
                     default:
                         break;
                 }
-
-                if (data == DONE)
-                    SaveToDB();
             }
 
             uint32 GetData(uint32 type) const override
@@ -383,36 +379,6 @@ class instance_serpent_shrine : public InstanceMapScript
                 }
 
                 return 0;
-            }
-
-            std::string GetSaveData() override
-            {
-                OUT_SAVE_INST_DATA;
-                std::ostringstream stream;
-                stream << m_auiEncounter[0] << ' ' << m_auiEncounter[1] << ' ' << m_auiEncounter[2] << ' '
-                    << m_auiEncounter[3] << ' ' << m_auiEncounter[4] << ' ' << m_auiEncounter[5] << ' ' << TrashCount;
-                OUT_SAVE_INST_DATA_COMPLETE;
-                return stream.str();
-            }
-
-            void Load(char const* in) override
-            {
-                if (!in)
-                {
-                    OUT_LOAD_INST_DATA_FAIL;
-                    return;
-                }
-
-                OUT_LOAD_INST_DATA(in);
-                std::istringstream stream(in);
-                stream >> m_auiEncounter[0] >> m_auiEncounter[1] >> m_auiEncounter[2] >> m_auiEncounter[3]
-                    >> m_auiEncounter[4] >> m_auiEncounter[5] >> TrashCount;
-
-                for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-                    if (m_auiEncounter[i] == IN_PROGRESS)                // Do not load an encounter as "In Progress" - reset it instead.
-                        m_auiEncounter[i] = NOT_STARTED;
-
-                OUT_LOAD_INST_DATA_COMPLETE;
             }
 
         private:

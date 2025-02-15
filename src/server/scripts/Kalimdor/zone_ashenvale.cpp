@@ -86,7 +86,7 @@ public:
             if (quest->GetQuestId() == QUEST_FREEDOM_TO_RUUL)
             {
                 me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_PASSIVE);
-                EscortAI::Start(true, false, player->GetGUID());
+                EscortAI::Start(true, player->GetGUID());
             }
         }
 
@@ -239,7 +239,7 @@ public:
             {
                 Talk(SAY_MUG_START1);
                 me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_PASSIVE);
-                EscortAI::Start(true, false, player->GetGUID());
+                EscortAI::Start(true, player->GetGUID());
             }
         }
 

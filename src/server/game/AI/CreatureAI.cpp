@@ -70,7 +70,7 @@ void CreatureAI::OnCharmed(bool isNew)
         me->LastCharmerGUID.Clear();
 
         if (!me->IsInCombat())
-            EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
+            EnterEvadeMode(EvadeReason::NoHostiles);
     }
 
     UnitAI::OnCharmed(isNew);
@@ -264,7 +264,7 @@ bool CreatureAI::UpdateVictim()
     }
     else if (!me->IsInCombat())
     {
-        EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
+        EnterEvadeMode(EvadeReason::NoHostiles);
         return false;
     }
     else if (me->GetVictim())
@@ -439,7 +439,7 @@ bool CreatureAI::CheckInRoom()
         return true;
     else
     {
-        EnterEvadeMode(EVADE_REASON_BOUNDARY);
+        EnterEvadeMode(EvadeReason::Boundary);
         return false;
     }
 }

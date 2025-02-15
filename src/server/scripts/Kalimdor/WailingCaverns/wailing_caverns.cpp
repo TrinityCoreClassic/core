@@ -281,7 +281,6 @@ public:
                                     naralex->AI()->Talk(SAY_FAREWELL);
                                     naralex->AddAura(SPELL_FLIGHT_FORM, naralex);
                                 }
-                                SetRun();
                                 me->SetStandState(UNIT_STAND_STATE_STAND);
                                 me->AddAura(SPELL_FLIGHT_FORM, me);
                             }
@@ -335,7 +334,7 @@ public:
                 me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_ACTIVE);
                 me->SetImmuneToPC(false);
 
-                Start(false, false, player->GetGUID());
+                Start(false, player->GetGUID());
                 SetDespawnAtFar(false);
                 SetDespawnAtEnd(false);
             }

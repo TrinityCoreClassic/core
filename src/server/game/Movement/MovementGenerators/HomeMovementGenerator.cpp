@@ -147,8 +147,10 @@ void HomeMovementGenerator<Creature>::DoFinalize(Creature* owner, bool active, b
         if (!owner->HasCanSwimFlagOutOfCombat())
             owner->RemoveUnitFlag(UNIT_FLAG_CAN_SWIM);
 
+        owner->InitializeMovementCapabilities();
         owner->SetSpawnHealth();
         owner->LoadCreaturesAddon();
+
         if (owner->IsVehicle())
             owner->GetVehicleKit()->Reset(true);
         if (CreatureAI* ai = owner->AI())

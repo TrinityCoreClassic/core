@@ -275,10 +275,6 @@ void KillRewarder::Reward()
     // 7. Credit scenario criterias
     if (Creature* victim = _victim->ToCreature())
     {
-        if (victim->IsDungeonBoss())
-            if (InstanceScript* instance = _victim->GetInstanceScript())
-                instance->UpdateEncounterStateForKilledCreature(_victim->GetEntry(), _victim);
-
         if (ObjectGuid::LowType guildId = victim->GetMap()->GetOwnerGuildId())
             if (Guild* guild = sGuildMgr->GetGuildById(guildId))
                 guild->UpdateCriteria(CriteriaType::KillCreature, victim->GetEntry(), 1, 0, victim, _killer);

@@ -408,7 +408,7 @@ GameObject* Transport::CreateGOPassenger(ObjectGuid::LowType guid, GameObjectDat
     return go;
 }
 
-TempSummon* Transport::SummonPassenger(uint32 entry, Position const& pos, TempSummonType summonType, SummonPropertiesEntry const* properties /*= nullptr*/, uint32 duration /*= 0*/, Unit* summoner /*= nullptr*/, uint32 spellId /*= 0*/, uint32 vehId /*= 0*/)
+TempSummon* Transport::SummonPassenger(uint32 entry, Position const& pos, TempSummonType summonType, SummonPropertiesEntry const* properties /*= nullptr*/, Milliseconds duration /*= 0*/, Unit* summoner /*= nullptr*/, uint32 spellId /*= 0*/, uint32 vehId /*= 0*/)
 {
     Map* map = FindMap();
     if (!map)
@@ -650,7 +650,7 @@ void Transport::TeleportPassengersAndHideTransport(uint32 newMapid, float x, flo
 
         for (MapReference const& ref : GetMap()->GetPlayers())
         {
-            if (ref.GetSource()->GetTransport() != this && ref.GetSource()->IsInPhase(this))
+            if (ref.GetSource()->GetTransport() != this && ref.GetSource()->InSamePhase(this))
             {
                 UpdateData data(GetMap()->GetId());
                 BuildCreateUpdateBlockForPlayer(&data, ref.GetSource());
@@ -722,7 +722,7 @@ void Transport::BuildUpdate(UpdateDataMapType& data_map)
         return;
 
     for (MapReference const& playerReference : players)
-        if (playerReference.GetSource()->IsInPhase(this))
+        if (playerReference.GetSource()->InSamePhase(this))
             BuildFieldsUpdate(playerReference.GetSource(), data_map);
 
     ClearUpdateMask(true);

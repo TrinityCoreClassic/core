@@ -284,7 +284,7 @@ namespace VMAP
         return false;
     }
 
-    void VMapManager2::getAreaAndLiquidData(unsigned int mapId, float x, float y, float z, uint8 reqLiquidType, AreaAndLiquidData& data) const
+	bool VMapManager2::getAreaAndLiquidData(unsigned int mapId, float x, float y, float z, Optional<uint8> reqLiquidType, AreaAndLiquidData& data) const
     {
         if (IsVMAPDisabledForPtr(mapId, VMAP_DISABLE_LIQUIDSTATUS))
         {
@@ -292,8 +292,8 @@ namespace VMAP
             int32 adtId, rootId, groupId;
             uint32 flags;
             if (getAreaInfo(mapId, x, y, data.floorZ, flags, adtId, rootId, groupId))
-                data.areaInfo.emplace(adtId, rootId, groupId, flags);
-            return;
+                data.areaInfo.emplace(adtId, rootId, groupId, flags, 0);
+            return false;
         }
         InstanceTreeMap::const_iterator instanceTree = GetMapTree(mapId);
         if (instanceTree != iInstanceMapTrees.end())
@@ -305,14 +305,18 @@ namespace VMAP
                 data.floorZ = info.ground_Z;
                 uint32 liquidType = info.hitModel->GetLiquidType();
                 float liquidLevel;
-                if (!reqLiquidType || (GetLiquidFlagsPtr(liquidType) & reqLiquidType))
+                if (!reqLiquidType || (GetLiquidFlagsPtr(liquidType) & *reqLiquidType))
                     if (info.hitInstance->GetLiquidLevel(pos, info, liquidLevel))
                         data.liquidInfo.emplace(liquidType, liquidLevel);
 
                 if (!IsVMAPDisabledForPtr(mapId, VMAP_DISABLE_AREAFLAG))
-                    data.areaInfo.emplace(info.hitInstance->adtId, info.rootId, info.hitModel->GetWmoID(), info.hitModel->GetMogpFlags());
+                    data.areaInfo.emplace(info.hitInstance->adtId, info.rootId, info.hitModel->GetWmoID(), info.hitModel->GetMogpFlags(), info.hitInstance->ID);
+
+                return true;
             }
         }
+
+        return false;
     }
 
     WorldModel* VMapManager2::acquireModelInstance(const std::string& basepath, const std::string& filename, uint32 flags/* Only used when creating the model */)

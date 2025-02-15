@@ -234,7 +234,7 @@ class boss_halion : public CreatureScript
 
             void EnterEvadeMode(EvadeReason why) override
             {
-                if (why == EVADE_REASON_BOUNDARY || events.IsInPhase(PHASE_ONE))
+                if (why == EvadeReason::Boundary || events.IsInPhase(PHASE_ONE))
                     if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))
                         controller->AI()->EnterEvadeMode(why);
             }
@@ -301,7 +301,7 @@ class boss_halion : public CreatureScript
                 if (events.IsInPhase(PHASE_THREE))
                 {
                     // Don't consider copied damage.
-                    if (!attacker || !me->IsInPhase(attacker))
+                    if (!attacker || !me->InSamePhase(attacker))
                         return;
 
                     if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -345,7 +345,7 @@ class boss_halion : public CreatureScript
                             events.ScheduleEvent(EVENT_BREATH, randtime(Seconds(16), Seconds(25)));
                             break;
                         case EVENT_ACTIVATE_FIREWALL:
-                            // Flame ring is activated 5 seconds after starting encounter, DOOR_TYPE_ROOM is only instant.
+                            // Flame ring is activated 5 seconds after starting encounter, EncounterDoorBehavior::OpenWhenNotInProgress is only instant.
                             for (uint8 i = DATA_FLAME_RING; i <= DATA_TWILIGHT_FLAME_RING; ++i)
                                 if (GameObject* flameRing = instance->GetGameObject(i))
                                     instance->HandleGameObject(ObjectGuid::Empty, false, flameRing);
@@ -486,7 +486,7 @@ class boss_twilight_halion : public CreatureScript
                 if (events.IsInPhase(PHASE_THREE))
                 {
                     // Don't consider copied damage.
-                    if (!attacker || !me->IsInPhase(attacker))
+                    if (!attacker || !me->InSamePhase(attacker))
                         return;
 
                     if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -773,7 +773,7 @@ class npc_halion_controller : public CreatureScript
                         if (player->IsAlive() && IsInBoundary(player) && !player->IsGameMaster())
                             return;
 
-                EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
+                EnterEvadeMode(EvadeReason::NoHostiles);
             }
 
             void SetData(uint32 id, uint32 value) override
@@ -1616,7 +1616,7 @@ class spell_halion_damage_aoe_summon : public SpellScriptLoader
                 Unit* caster = GetCaster();
                 uint32 entry = uint32(GetEffectInfo().MiscValue);
                 SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(uint32(GetEffectInfo().MiscValueB));
-                uint32 duration = uint32(GetSpellInfo()->GetDuration());
+                Milliseconds duration = Milliseconds(GetSpellInfo()->GetDuration());
 
                 Position pos = caster->GetPosition();
                 if (Creature* summon = caster->GetMap()->SummonCreature(entry, pos, properties, duration, caster, GetSpellInfo()->Id))
@@ -1662,7 +1662,7 @@ class spell_halion_twilight_realm_handlers : public SpellScriptLoader
             {
                 GetTarget()->RemoveAurasDueToSpell(SPELL_TWILIGHT_REALM);
                 if (InstanceScript* instance = GetTarget()->GetInstanceScript())
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_UNK7);
+                    instance->SendEncounterUnit(ENCOUNTER_FRAME_PHASE_SHIFT_CHANGED, nullptr);
             }
 
             void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*handle*/)
@@ -1673,7 +1673,7 @@ class spell_halion_twilight_realm_handlers : public SpellScriptLoader
 
                 target->RemoveAurasDueToSpell(_beforeHitSpellId, ObjectGuid::Empty, 0, AURA_REMOVE_BY_ENEMY_SPELL);
                 if (InstanceScript* instance = target->GetInstanceScript())
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_UNK7);
+                    instance->SendEncounterUnit(ENCOUNTER_FRAME_PHASE_SHIFT_CHANGED, nullptr);
             }
 
             void Register() override

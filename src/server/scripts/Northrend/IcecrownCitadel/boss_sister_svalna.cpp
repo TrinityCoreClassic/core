@@ -746,7 +746,7 @@ struct npc_crok_scourgebane : public EscortAI
                     Talk(SAY_CROK_INTRO_3);
                     break;
                 case EVENT_START_PATHING:
-                    Start(true, true);
+                    Start(true);
                     break;
                 case EVENT_SCOURGE_STRIKE:
                     DoCastVictim(SPELL_SCOURGE_STRIKE);
@@ -833,7 +833,7 @@ public:
                 me->SetReactState(REACT_DEFENSIVE);
                 FollowAngle = me->GetAbsoluteAngle(crok) + me->GetOrientation();
                 FollowDist = me->GetDistance2d(crok);
-                me->GetMotionMaster()->MoveFollow(crok, FollowDist, FollowAngle, MOTION_SLOT_DEFAULT);
+                me->GetMotionMaster()->MoveFollow(crok, FollowDist, FollowAngle, {}, MOTION_SLOT_DEFAULT);
             }
 
             me->setActive(true);
@@ -874,7 +874,7 @@ public:
         {
             me->GetMotionMaster()->Clear();
             if (Creature* crok = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_CROK_SCOURGEBANE)))
-                me->GetMotionMaster()->MoveFollow(crok, FollowDist, FollowAngle, MOTION_SLOT_DEFAULT);
+                me->GetMotionMaster()->MoveFollow(crok, FollowDist, FollowAngle, {}, MOTION_SLOT_DEFAULT);
         }
 
         Reset();

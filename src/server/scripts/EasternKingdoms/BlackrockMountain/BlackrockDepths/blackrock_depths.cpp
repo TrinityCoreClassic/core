@@ -226,7 +226,6 @@ public:
                     Event_Timer = 5000;
                     break;
                 case 5:
-                    instance->UpdateEncounterStateForKilledCreature(NPC_GRIMSTONE, me);
                     instance->SetData(TYPE_RING_OF_LAW, DONE);
                     TC_LOG_DEBUG("scripts", "npc_grimstone: event reached end and set complete.");
                     break;
@@ -287,7 +286,7 @@ public:
                     case 0:
                         Talk(SAY_TEXT5);
                         HandleGameObject(DATA_ARENA4, false);
-                        Start(false, false);
+                        Start(false);
                         CanWalk = true;
                         Event_Timer = 0;
                         break;
@@ -617,7 +616,7 @@ public:
                     Talk(SAY_GOT_BEER);
                     DoCastSelf(SPELL_DRUNKEN_RAGE, false);
 
-                    Start(false, false);
+                    Start(false);
                 }
             }
         }

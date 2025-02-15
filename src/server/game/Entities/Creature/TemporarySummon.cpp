@@ -75,6 +75,8 @@ void TempSummon::Update(uint32 diff)
         UnSummon();
         return;
     }
+
+    Milliseconds msDiff = Milliseconds(diff);
     switch (m_type)
     {
         case TEMPSUMMON_MANUAL_DESPAWN:
@@ -82,26 +84,26 @@ void TempSummon::Update(uint32 diff)
             break;
         case TEMPSUMMON_TIMED_DESPAWN:
         {
-            if (m_timer <= diff)
+            if (m_timer <= msDiff)
             {
                 UnSummon();
                 return;
             }
 
-            m_timer -= diff;
+            m_timer -= msDiff;
             break;
         }
         case TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT:
         {
             if (!IsInCombat())
             {
-                if (m_timer <= diff)
+                if (m_timer <= msDiff)
                 {
                     UnSummon();
                     return;
                 }
 
-                m_timer -= diff;
+                m_timer -= msDiff;
             }
             else if (m_timer != m_lifetime)
                 m_timer = m_lifetime;
@@ -113,13 +115,13 @@ void TempSummon::Update(uint32 diff)
         {
             if (m_deathState == CORPSE)
             {
-                if (m_timer <= diff)
+                if (m_timer <= msDiff)
                 {
                     UnSummon();
                     return;
                 }
 
-                m_timer -= diff;
+                m_timer -= msDiff;
             }
             break;
         }
@@ -144,13 +146,13 @@ void TempSummon::Update(uint32 diff)
 
             if (!IsInCombat())
             {
-                if (m_timer <= diff)
+                if (m_timer <= msDiff)
                 {
                     UnSummon();
                     return;
                 }
                 else
-                    m_timer -= diff;
+                    m_timer -= msDiff;
             }
             else if (m_timer != m_lifetime)
                 m_timer = m_lifetime;
@@ -160,13 +162,13 @@ void TempSummon::Update(uint32 diff)
         {
             if (!IsInCombat() && IsAlive())
             {
-                if (m_timer <= diff)
+                if (m_timer <= msDiff)
                 {
                     UnSummon();
                     return;
                 }
                 else
-                    m_timer -= diff;
+                    m_timer -= msDiff;
             }
             else if (m_timer != m_lifetime)
                 m_timer = m_lifetime;
@@ -179,7 +181,7 @@ void TempSummon::Update(uint32 diff)
     }
 }
 
-void TempSummon::InitStats(uint32 duration)
+void TempSummon::InitStats(Milliseconds duration)
 {
     ASSERT(!IsPet());
 
@@ -188,7 +190,7 @@ void TempSummon::InitStats(uint32 duration)
 
     if (m_type == TEMPSUMMON_MANUAL_DESPAWN)
     {
-        if (duration <= 0)
+        if (duration <= 0s)
             m_type = TEMPSUMMON_DEAD_DESPAWN;
         else if (m_Properties && m_Properties->GetFlags().HasFlag(SummonPropertiesFlags::UseDemonTimeout))
             m_type = TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT;
@@ -394,7 +396,7 @@ Minion::Minion(SummonPropertiesEntry const* properties, Unit* owner, bool isWorl
     InitCharmInfo();
 }
 
-void Minion::InitStats(uint32 duration)
+void Minion::InitStats(Milliseconds duration)
 {
     TempSummon::InitStats(duration);
 
@@ -463,7 +465,7 @@ Guardian::Guardian(SummonPropertiesEntry const* properties, Unit* owner, bool is
     }
 }
 
-void Guardian::InitStats(uint32 duration)
+void Guardian::InitStats(Milliseconds duration)
 {
     Minion::InitStats(duration);
 
@@ -501,7 +503,7 @@ Puppet::Puppet(SummonPropertiesEntry const* properties, Unit* owner)
     m_unitTypeMask |= UNIT_MASK_PUPPET;
 }
 
-void Puppet::InitStats(uint32 duration)
+void Puppet::InitStats(Milliseconds duration)
 {
     Minion::InitStats(duration);
     SetReactState(REACT_PASSIVE);

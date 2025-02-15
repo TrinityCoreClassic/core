@@ -360,7 +360,7 @@ public:
     {
         npc_black_knight_skeletal_gryphonAI(Creature* creature) : EscortAI(creature)
         {
-            Start(false, true);
+            Start(false);
         }
 
         void UpdateAI(uint32 uiDiff) override

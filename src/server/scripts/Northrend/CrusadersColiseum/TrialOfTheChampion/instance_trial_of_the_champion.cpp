@@ -229,8 +229,6 @@ public:
                     break;
             }
 
-            if (uiData == DONE)
-                SaveToDB();
         }
 
         uint32 GetData(uint32 uiData) const override
@@ -273,16 +271,6 @@ public:
                     uiGrandChampion3GUID = uiData;
                     break;
             }
-        }
-
-        void WriteSaveDataMore(std::ostringstream& stream) override
-        {
-            stream << uiGrandChampionsDeaths << ' ' << uiMovementDone;
-        }
-
-        void ReadSaveDataMore(std::istringstream& stream) override
-        {
-            stream >> uiGrandChampionsDeaths >> uiMovementDone;
         }
     };
 };

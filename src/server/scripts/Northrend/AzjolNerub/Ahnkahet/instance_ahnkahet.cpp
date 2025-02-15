@@ -25,8 +25,8 @@
 
 DoorData const doorData[] =
 {
-    { GO_PRINCE_TALDARAM_GATE, DATA_PRINCE_TALDARAM, DOOR_TYPE_PASSAGE },
-    { 0,                       0,                    DOOR_TYPE_ROOM } // END
+    { GO_PRINCE_TALDARAM_GATE, DATA_PRINCE_TALDARAM, EncounterDoorBehavior::OpenWhenDone },
+    { 0,                       0,                    EncounterDoorBehavior::OpenWhenNotInProgress } // END
 };
 
 ObjectData const creatureData[] =
@@ -126,17 +126,6 @@ class instance_ahnkahet : public InstanceMapScript
                         break;
                 }
                 return 0;
-            }
-
-            void WriteSaveDataMore(std::ostringstream& data) override
-            {
-                data << SpheresState[0] << ' ' << SpheresState[1];
-            }
-
-            void ReadSaveDataMore(std::istringstream& data) override
-            {
-                data >> SpheresState[0];
-                data >> SpheresState[1];
             }
 
         protected:

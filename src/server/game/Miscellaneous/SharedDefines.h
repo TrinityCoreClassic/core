@@ -1097,8 +1097,41 @@ enum Team
     //TEAM_HORDE_FORCES        = 892,
     //TEAM_SANCTUARY           = 936,
     //TEAM_OUTLAND             = 980,
+    //PANDARIA_NEUTRAL         = 1249,                      // Starting pandas should have this team
     TEAM_OTHER               = 0                            // if ReputationListId > 0 && Flags != FACTION_FLAG_TEAM_HEADER
 };
+
+
+constexpr Team GetOtherTeam(Team team)
+{
+    switch (team)
+    {
+    case HORDE:
+        return ALLIANCE;
+    case ALLIANCE:
+        return HORDE;
+    //case PANDARIA_NEUTRAL:
+    //    return PANDARIA_NEUTRAL;
+    default:
+        break;
+    }
+    return TEAM_OTHER;
+}
+
+constexpr TeamId GetTeamIdForTeam(Team team)
+{
+    switch (team)
+    {
+    case HORDE:
+        return TEAM_HORDE;
+    case ALLIANCE:
+        return TEAM_ALLIANCE;
+    default:
+        break;
+    }
+    return TEAM_NEUTRAL;
+}
+
 
 enum SpellEffectName
 {

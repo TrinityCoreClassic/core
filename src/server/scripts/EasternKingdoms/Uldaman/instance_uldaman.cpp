@@ -391,19 +391,6 @@ class instance_uldaman : public InstanceMapScript
                         keystoneCheck = true;
                         break;
                 }
-
-                if (data == DONE)
-                {
-                    OUT_SAVE_INST_DATA;
-
-                    std::ostringstream saveStream;
-                    saveStream << m_auiEncounter[0] << ' ' << m_auiEncounter[1] << ' ' << m_auiEncounter[2];
-
-                    str_data = saveStream.str();
-
-                    SaveToDB();
-                    OUT_SAVE_INST_DATA_COMPLETE;
-                }
             }
 
             void SetGuidData(uint32 type, ObjectGuid data) override
@@ -414,33 +401,6 @@ class instance_uldaman : public InstanceMapScript
                     ActivateArchaedas (data);
                     SetDoor(archaedasTempleDoor, false); //close when event is started
                 }
-            }
-
-            std::string GetSaveData() override
-            {
-                return str_data;
-            }
-
-            void Load(char const* in) override
-            {
-                if (!in)
-                {
-                    OUT_LOAD_INST_DATA_FAIL;
-                    return;
-                }
-
-                OUT_LOAD_INST_DATA(in);
-
-                std::istringstream loadStream(in);
-                loadStream >> m_auiEncounter[0] >> m_auiEncounter[1] >> m_auiEncounter[2];
-
-                for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-                {
-                    if (m_auiEncounter[i] == IN_PROGRESS)
-                        m_auiEncounter[i] = NOT_STARTED;
-                }
-
-                OUT_LOAD_INST_DATA_COMPLETE;
             }
 
             void OnCreatureCreate(Creature* creature) override

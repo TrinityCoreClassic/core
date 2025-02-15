@@ -63,7 +63,7 @@ void AreaTrigger::AddToWorld()
     ///- Register the AreaTrigger for guid lookup and for caster
     if (!IsInWorld())
     {
-        GetMap()->GetObjectsStore().Insert<AreaTrigger>(GetGUID(), this);
+        GetMap()->GetObjectsStore().Insert<AreaTrigger>(this);
         if (_spawnId)
             GetMap()->GetAreaTriggerBySpawnIdStore().insert(std::make_pair(_spawnId, this));
 
@@ -90,7 +90,7 @@ void AreaTrigger::RemoveFromWorld()
 
         if (_spawnId)
             Trinity::Containers::MultimapErasePair(GetMap()->GetAreaTriggerBySpawnIdStore(), _spawnId, this);
-        GetMap()->GetObjectsStore().Remove<AreaTrigger>(GetGUID());
+        GetMap()->GetObjectsStore().Remove<AreaTrigger>(this);
     }
 }
 

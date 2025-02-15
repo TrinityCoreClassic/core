@@ -637,13 +637,18 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
 
         uint32 GetInstanceId() const { return m_InstanceId; }
 
-        bool IsInPhase(WorldObject const* obj) const
+        bool InSamePhase(PhaseShift const& phaseShift) const
         {
+            return GetPhaseShift().CanSee(phaseShift);
+        }
+        bool InSamePhase(WorldObject const* obj) const
+        {
+            return GetPhaseShift().CanSee(obj->GetPhaseShift());
             return GetPhaseShift().CanSee(obj->GetPhaseShift());
         }
         static bool InSamePhase(WorldObject const* a, WorldObject const* b)
         {
-            return a && b && a->IsInPhase(b);
+            return a && b && a->InSamePhase(b);
         }
 
         PhaseShift& GetPhaseShift() { return _phaseShift; }
@@ -848,9 +853,9 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         void SetFarVisible(bool on);
         bool IsVisibilityOverridden() const { return m_visibilityDistanceOverride.has_value(); }
         void SetVisibilityDistanceOverride(VisibilityDistanceType type);
-        void SetWorldObject(bool apply);
-        bool IsPermanentWorldObject() const { return m_isWorldObject; }
-        bool IsWorldObject() const;
+        void SetIsStoredInWorldObjectGridContainer(bool apply);
+        bool IsAlwaysStoredInWorldObjectGridContainer() const { return m_isStoredInWorldObjectGridContainer; }
+        bool IsStoredInWorldObjectGridContainer() const;
 
         uint32  LastUsedScriptID;
 
@@ -904,7 +909,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         bool m_isActive;
         bool m_isFarVisible;
         Optional<float> m_visibilityDistanceOverride;
-        bool const m_isWorldObject;
+        bool const m_isStoredInWorldObjectGridContainer;
         ZoneScript* m_zoneScript;
 
         // transports (gameobjects only)

@@ -132,7 +132,7 @@ public:
                     AddWaypoint(5, 5508.16f,    -2659.2f,    1480.15f);
                     AddWaypoint(6, 5489.62f,    -2704.05f,    1482.18f);
                     AddWaypoint(7, 5457.04f,    -2726.26f,    1485.10f);
-                    Start(false, true);
+                    Start(false);
                     SetDespawnAtEnd(false);
                 }
             }

@@ -29,7 +29,7 @@
 Totem::Totem(SummonPropertiesEntry const* properties, Unit* owner) : Minion(properties, owner, false)
 {
     m_unitTypeMask |= UNIT_MASK_TOTEM;
-    m_duration = 0;
+    m_duration = 0s;
     m_type = TOTEM_PASSIVE;
 }
 
@@ -41,18 +41,18 @@ void Totem::Update(uint32 time)
         return;
     }
 
-    if (m_duration <= time)
+    if (m_duration <= Milliseconds(time))
     {
         UnSummon();                                         // remove self
         return;
     }
     else
-        m_duration -= time;
+        m_duration -= Milliseconds(time);
 
     Creature::Update(time);
 }
 
-void Totem::InitStats(uint32 duration)
+void Totem::InitStats(Milliseconds duration)
 {
     // client requires SMSG_TOTEM_CREATED to be sent before adding to world and before removing old totem
     if (Player* owner = GetOwner()->ToPlayer())
@@ -62,7 +62,7 @@ void Totem::InitStats(uint32 duration)
             WorldPackets::Totem::TotemCreated data;
             data.Totem = GetGUID();
             data.Slot = m_Properties->Slot - SUMMON_SLOT_TOTEM;
-            data.Duration = duration;
+            data.Duration = duration.count();
             data.SpellID = m_unitData->CreatedBySpell;
             owner->SendDirectMessage(data.Write());
         }

@@ -402,45 +402,6 @@ class instance_stratholme : public InstanceMapScript
                         break;
                 }
 
-                if (data == DONE)
-                    SaveToDB();
-            }
-
-            std::string GetSaveData() override
-            {
-                OUT_SAVE_INST_DATA;
-
-                std::ostringstream saveStream;
-                saveStream << EncounterState[0] << ' ' << EncounterState[1] << ' ' << EncounterState[2] << ' '
-                    << EncounterState[3] << ' ' << EncounterState[4] << ' ' << EncounterState[5];
-
-                OUT_SAVE_INST_DATA_COMPLETE;
-                return saveStream.str();
-            }
-
-            void Load(char const* in) override
-            {
-                if (!in)
-                {
-                    OUT_LOAD_INST_DATA_FAIL;
-                    return;
-                }
-
-                OUT_LOAD_INST_DATA(in);
-
-                std::istringstream loadStream(in);
-                loadStream >> EncounterState[0] >> EncounterState[1] >> EncounterState[2] >> EncounterState[3]
-                >> EncounterState[4] >> EncounterState[5];
-
-                // Do not reset 1, 2 and 3. they are not set to done, yet .
-                if (EncounterState[0] == IN_PROGRESS)
-                    EncounterState[0] = NOT_STARTED;
-                if (EncounterState[4] == IN_PROGRESS)
-                    EncounterState[4] = NOT_STARTED;
-                if (EncounterState[5] == IN_PROGRESS)
-                    EncounterState[5] = NOT_STARTED;
-
-                OUT_LOAD_INST_DATA_COMPLETE;
             }
 
             uint32 GetData(uint32 type) const override

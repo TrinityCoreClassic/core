@@ -123,7 +123,7 @@ public:
             if (action == GOSSIP_ACTION_INFO_DEF + 1)
             {
                 CloseGossipMenuFor(player);
-                Start(false, false, player->GetGUID());
+                Start(false, player->GetGUID());
             }
             return true;
         }

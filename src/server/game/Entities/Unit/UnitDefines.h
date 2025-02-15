@@ -147,7 +147,7 @@ enum UnitPetFlag : uint8
 
 DEFINE_ENUM_FLAG(UnitPetFlag);
 
-enum UnitMoveType
+enum UnitMoveType : uint8
 {
     MOVE_WALK           = 0,
     MOVE_RUN            = 1,
@@ -462,6 +462,9 @@ enum MovementFlags3 : uint32
 {
     MOVEMENTFLAG3_NONE              = 0x00000000,
     MOVEMENTFLAG3_DISABLE_INERTIA   = 0x00000001,
+    MOVEMENTFLAG3_CAN_ADV_FLY       = 0x00000002,
+    MOVEMENTFLAG3_ADV_FLYING        = 0x00000004,
+    MOVEMENTFLAG3_CANT_SWIM         = 0x00002000,
 };
 
 enum HitInfo

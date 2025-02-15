@@ -225,12 +225,10 @@ public:
                 case DATA_ALLIANCE_RETREAT:
                     allianceRetreat = data;
                     HandleGameObject(HordeGate, true);
-                    SaveToDB();
                     break;
                 case DATA_HORDE_RETREAT:
                     hordeRetreat = data;
                     HandleGameObject(ElfGate, true);
-                    SaveToDB();
                     break;
                 case DATA_RAIDDAMAGE:
                     RaidDamage += data;
@@ -243,23 +241,6 @@ public:
             }
 
              TC_LOG_DEBUG("scripts", "Instance Hyjal: Instance data updated for event {} (Data={})", type, data);
-
-            if (data == DONE)
-            {
-                OUT_SAVE_INST_DATA;
-
-                std::ostringstream saveStream;
-                saveStream << m_auiEncounter[0] << ' ' << m_auiEncounter[1] << ' ' << m_auiEncounter[2] << ' '
-                    << m_auiEncounter[3] << ' ' << m_auiEncounter[4]
-                    << ' ' << allianceRetreat << ' ' << hordeRetreat
-                    << ' ' << RaidDamage;
-
-                str_data = saveStream.str();
-
-                SaveToDB();
-                OUT_SAVE_INST_DATA_COMPLETE;
-            }
-
         }
 
         uint32 GetData(uint32 type) const override
@@ -279,26 +260,12 @@ public:
             return 0;
         }
 
-        std::string GetSaveData() override
+        void AfterDataLoad() override
         {
-            return str_data;
-        }
-
-        void Load(char const* in) override
-        {
-            if (!in)
-            {
-                OUT_LOAD_INST_DATA_FAIL;
-                return;
-            }
-
-            OUT_LOAD_INST_DATA(in);
-            std::istringstream loadStream(in);
-            loadStream >> m_auiEncounter[0] >> m_auiEncounter[1] >> m_auiEncounter[2] >> m_auiEncounter[3] >> m_auiEncounter[4] >> allianceRetreat >> hordeRetreat >> RaidDamage;
-            for (uint8 i = 0; i < EncounterCount; ++i)
-                if (m_auiEncounter[i] == IN_PROGRESS)                // Do not load an encounter as IN_PROGRESS - reset it instead.
-                    m_auiEncounter[i] = NOT_STARTED;
-            OUT_LOAD_INST_DATA_COMPLETE;
+            if (GetBossState(DATA_ANETHERON) == DONE)
+                allianceRetreat = 1;
+            if (GetBossState(DATA_AZGALOR) == DONE)
+                hordeRetreat = 1;
         }
 
         protected:

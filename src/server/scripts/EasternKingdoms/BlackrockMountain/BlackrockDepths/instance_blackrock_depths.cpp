@@ -234,20 +234,6 @@ public:
                     GhostKillCount += data;
                     break;
             }
-
-            if (data == DONE || GhostKillCount >= TOMB_OF_SEVEN_BOSS_NUM)
-            {
-                OUT_SAVE_INST_DATA;
-
-                std::ostringstream saveStream;
-                saveStream << encounter[0] << ' ' << encounter[1] << ' ' << encounter[2] << ' '
-                    << encounter[3] << ' ' << encounter[4] << ' ' << encounter[5] << ' ' << GhostKillCount;
-
-                str_data = saveStream.str();
-
-                SaveToDB();
-                OUT_SAVE_INST_DATA_COMPLETE;
-            }
         }
 
         uint32 GetData(uint32 type) const override
@@ -317,36 +303,6 @@ public:
                     return GoSpectralChaliceGUID;
             }
             return ObjectGuid::Empty;
-        }
-
-        std::string GetSaveData() override
-        {
-            return str_data;
-        }
-
-        void Load(char const* in) override
-        {
-            if (!in)
-            {
-                OUT_LOAD_INST_DATA_FAIL;
-                return;
-            }
-
-            OUT_LOAD_INST_DATA(in);
-
-            std::istringstream loadStream(in);
-            loadStream >> encounter[0] >> encounter[1] >> encounter[2] >> encounter[3]
-            >> encounter[4] >> encounter[5] >> GhostKillCount;
-
-            for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-                if (encounter[i] == IN_PROGRESS)
-                    encounter[i] = NOT_STARTED;
-            if (GhostKillCount > 0 && GhostKillCount < TOMB_OF_SEVEN_BOSS_NUM)
-                GhostKillCount = 0;//reset tomb of seven event
-            if (GhostKillCount >= TOMB_OF_SEVEN_BOSS_NUM)
-                GhostKillCount = TOMB_OF_SEVEN_BOSS_NUM;
-
-            OUT_LOAD_INST_DATA_COMPLETE;
         }
 
         void TombOfSevenEvent()

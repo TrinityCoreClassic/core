@@ -1608,7 +1608,7 @@ public:
                 case GOSSIP_ACTION_INFO_DEF + 1:
                     CloseGossipMenuFor(player);
                     uiStep = 1;
-                    Start(true, true, player->GetGUID());
+                    Start(true, player->GetGUID());
                     break;
             }
             return true;

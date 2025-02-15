@@ -63,6 +63,18 @@ public:
                 NaralexGUID = creature->GetGUID();
         }
 
+        void OnUnitDeath(Unit* unit) override
+        {
+            switch (unit->GetEntry())
+            {
+            case NPC_KRESH:                 SetBossState(BOSS_KRESH, DONE); break;
+            case NPC_SKUM:                  SetBossState(BOSS_SKUM, DONE); break;
+            case NPC_VERDAN_THE_EVERLIVING: SetBossState(BOSS_VERDAN_THE_EVERLIVING, DONE); break;
+            default:
+                break;
+            }
+        }
+
         void SetData(uint32 type, uint32 data) override
         {
             switch (type)
@@ -78,7 +90,6 @@ public:
                 case TYPE_MUTANUS_THE_DEVOURER: m_auiEncounter[8] = data;break;
                 case TYPE_NARALEX_YELLED:       yelled = true;      break;
             }
-            if (data == DONE)SaveToDB();
         }
 
         uint32 GetData(uint32 type) const override
@@ -103,40 +114,6 @@ public:
         {
             if (data == DATA_NARALEX)return NaralexGUID;
             return ObjectGuid::Empty;
-        }
-
-        std::string GetSaveData() override
-        {
-            OUT_SAVE_INST_DATA;
-
-            std::ostringstream saveStream;
-            saveStream << m_auiEncounter[0] << ' ' << m_auiEncounter[1] << ' ' << m_auiEncounter[2] << ' '
-                << m_auiEncounter[3] << ' ' << m_auiEncounter[4] << ' ' << m_auiEncounter[5] << ' '
-                << m_auiEncounter[6] << ' ' << m_auiEncounter[7] << ' ' << m_auiEncounter[8];
-
-            OUT_SAVE_INST_DATA_COMPLETE;
-            return saveStream.str();
-        }
-
-        void Load(char const* in) override
-        {
-            if (!in)
-            {
-                OUT_LOAD_INST_DATA_FAIL;
-                return;
-            }
-
-            OUT_LOAD_INST_DATA(in);
-
-            std::istringstream loadStream(in);
-            loadStream >> m_auiEncounter[0] >> m_auiEncounter[1] >> m_auiEncounter[2] >> m_auiEncounter[3]
-            >> m_auiEncounter[4] >> m_auiEncounter[5] >> m_auiEncounter[6] >> m_auiEncounter[7] >> m_auiEncounter[8];
-
-            for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-                if (m_auiEncounter[i] != DONE)
-                    m_auiEncounter[i] = NOT_STARTED;
-
-            OUT_LOAD_INST_DATA_COMPLETE;
         }
 
     };

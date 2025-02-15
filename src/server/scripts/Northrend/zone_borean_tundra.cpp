@@ -649,7 +649,7 @@ public:
             switch (action)
             {
                 case GOSSIP_ACTION_INFO_DEF + 1:
-                    Start(true, false, player->GetGUID());
+                    Start(true, player->GetGUID());
                     SetMaxPlayerDistance(200.0f);
                     break;
             }

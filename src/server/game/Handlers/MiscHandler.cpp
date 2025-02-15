@@ -36,7 +36,7 @@
 #include "Guild.h"
 #include "GuildMgr.h"
 #include "InstancePackets.h"
-#include "InstanceSaveMgr.h"
+#include "InstanceLockMgr.h"
 #include "InstanceScript.h"
 #include "Language.h"
 #include "Log.h"
@@ -573,32 +573,26 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPackets::AreaTrigger::AreaTrigge
     bool teleported = false;
     if (player->GetMapId() != at->target_mapId)
     {
-        if (Map::EnterState denyReason = Map::PlayerCannotEnter(at->target_mapId, player, false))
+        if (TransferAbortParams denyReason = Map::PlayerCannotEnter(at->target_mapId, player))
         {
             bool reviveAtTrigger = false; // should we revive the player if he is trying to enter the correct instance?
-            switch (denyReason)
+            switch (denyReason.Reason)
             {
-                case Map::CANNOT_ENTER_NO_ENTRY:
+                case TRANSFER_ABORT_MAP_NOT_ALLOWED:
                     TC_LOG_DEBUG("maps", "MAP: Player '{}' attempted to enter map with id {} which has no entry", player->GetName(), at->target_mapId);
                     break;
-                case Map::CANNOT_ENTER_UNINSTANCED_DUNGEON:
-                    TC_LOG_DEBUG("maps", "MAP: Player '{}' attempted to enter dungeon map {} but no instance template was found", player->GetName(), at->target_mapId);
-                    break;
-                case Map::CANNOT_ENTER_DIFFICULTY_UNAVAILABLE:
+                case TRANSFER_ABORT_DIFFICULTY:
                     TC_LOG_DEBUG("maps", "MAP: Player '{}' attempted to enter instance map {} but the requested difficulty was not found", player->GetName(), at->target_mapId);
                     if (MapEntry const* entry = sMapStore.LookupEntry(at->target_mapId))
                         player->SendTransferAborted(entry->ID, TRANSFER_ABORT_DIFFICULTY, player->GetDifficultyID(entry));
                     break;
-                case Map::CANNOT_ENTER_NOT_IN_RAID:
+                case TRANSFER_ABORT_NEED_GROUP:
                     TC_LOG_DEBUG("maps", "MAP: Player '{}' must be in a raid group to enter map {}", player->GetName(), at->target_mapId);
                     player->SendRaidGroupOnlyMessage(RAID_GROUP_ERR_ONLY, 0);
                     reviveAtTrigger = true;
                     break;
-                case Map::CANNOT_ENTER_CORPSE_IN_DIFFERENT_INSTANCE:
-                    player->GetSession()->SendPacket(WorldPackets::AreaTrigger::AreaTriggerNoCorpse().Write());
-                    TC_LOG_DEBUG("maps", "MAP: Player '{}' does not have a corpse in instance map {} and cannot enter", player->GetName(), at->target_mapId);
-                    break;
-                case Map::CANNOT_ENTER_INSTANCE_BIND_MISMATCH:
+                case TRANSFER_ABORT_LOCKED_TO_DIFFERENT_INSTANCE:
+                case TRANSFER_ABORT_ALREADY_COMPLETED_ENCOUNTER:
                     if (MapEntry const* entry = sMapStore.LookupEntry(at->target_mapId))
                     {
                         char const* mapName = entry->MapName[player->GetSession()->GetSessionDbcLocale()];
@@ -609,18 +603,21 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPackets::AreaTrigger::AreaTrigge
                     }
                     reviveAtTrigger = true;
                     break;
-                case Map::CANNOT_ENTER_TOO_MANY_INSTANCES:
+                case TRANSFER_ABORT_TOO_MANY_INSTANCES:
                     player->SendTransferAborted(at->target_mapId, TRANSFER_ABORT_TOO_MANY_INSTANCES);
                     TC_LOG_DEBUG("maps", "MAP: Player '{}' cannot enter instance map {} because he has exceeded the maximum number of instances per hour.", player->GetName(), at->target_mapId);
                     reviveAtTrigger = true;
                     break;
-                case Map::CANNOT_ENTER_MAX_PLAYERS:
+                case TRANSFER_ABORT_MAX_PLAYERS:
                     player->SendTransferAborted(at->target_mapId, TRANSFER_ABORT_MAX_PLAYERS);
                     reviveAtTrigger = true;
                     break;
-                case Map::CANNOT_ENTER_ZONE_IN_COMBAT:
+                case TRANSFER_ABORT_ZONE_IN_COMBAT:
                     player->SendTransferAborted(at->target_mapId, TRANSFER_ABORT_ZONE_IN_COMBAT);
                     reviveAtTrigger = true;
+                    break;
+                case TRANSFER_ABORT_NOT_FOUND:
+                    TC_LOG_DEBUG("maps", "MAP: Player '{}' cannot enter instance map {} because instance is resetting.", player->GetName(), at->target_mapId);
                     break;
                 default:
                     break;
@@ -644,22 +641,8 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPackets::AreaTrigger::AreaTrigge
 
     if (!teleported)
     {
-        WorldSafeLocsEntry const* entranceLocation = nullptr;
-        InstanceSave* instanceSave = player->GetInstanceSave(at->target_mapId);
-        if (instanceSave)
-        {
-            // Check if we can contact the instancescript of the instance for an updated entrance location
-            if (Map* map = sMapMgr->FindMap(at->target_mapId, player->GetInstanceSave(at->target_mapId)->GetInstanceId()))
-                if (InstanceMap* instanceMap = map->ToInstanceMap())
-                    if (InstanceScript* instanceScript = instanceMap->GetInstanceScript())
-                        entranceLocation = sObjectMgr->GetWorldSafeLoc(instanceScript->GetEntranceLocation());
-
-            // Finally check with the instancesave for an entrance location if we did not get a valid one from the instancescript
-            if (!entranceLocation)
-                entranceLocation = sObjectMgr->GetWorldSafeLoc(instanceSave->GetEntranceLocation());
-        }
-
-        if (entranceLocation)
+        WorldSafeLocsEntry const* entranceLocation = player->GetInstanceEntrance(at->target_mapId);
+        if (entranceLocation && player->GetMapId() != at->target_mapId)
             player->TeleportTo(entranceLocation->Loc, TELE_TO_NOT_LEAVE_TRANSPORT);
         else
             player->TeleportTo(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation, TELE_TO_NOT_LEAVE_TRANSPORT);
@@ -874,13 +857,22 @@ void WorldSession::HandleSetTitleOpcode(WorldPackets::Character::SetTitle& packe
 
 void WorldSession::HandleResetInstancesOpcode(WorldPackets::Instance::ResetInstances& /*packet*/)
 {
+    Map* map = _player->FindMap();
+    if (map && map->Instanceable())
+        return;
+
     if (Group* group = _player->GetGroup())
     {
-        if (group->IsLeader(_player->GetGUID()))
-            group->ResetInstances(INSTANCE_RESET_ALL, false, false, _player);
+        if (!group->IsLeader(_player->GetGUID()))
+            return;
+
+        if (group->isLFGGroup())
+            return;
+
+        group->ResetInstances(InstanceResetMethod::Manual, _player);
     }
     else
-        _player->ResetInstances(INSTANCE_RESET_ALL, false, false);
+        _player->ResetInstances(InstanceResetMethod::Manual);
 }
 
 void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPackets::Misc::SetDungeonDifficulty& setDungeonDifficulty)
@@ -889,21 +881,21 @@ void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPackets::Misc::SetDunge
     if (!difficultyEntry)
     {
         TC_LOG_DEBUG("network", "WorldSession::HandleSetDungeonDifficultyOpcode: {} sent an invalid instance mode {}!",
-            _player->GetGUID().ToString().c_str(), setDungeonDifficulty.DifficultyID);
+            _player->GetGUID().ToString(), setDungeonDifficulty.DifficultyID);
         return;
     }
 
     if (difficultyEntry->InstanceType != MAP_INSTANCE)
     {
         TC_LOG_DEBUG("network", "WorldSession::HandleSetDungeonDifficultyOpcode: {} sent an non-dungeon instance mode {}!",
-            _player->GetGUID().ToString().c_str(), difficultyEntry->ID);
+            _player->GetGUID().ToString(), difficultyEntry->ID);
         return;
     }
 
     if (!(difficultyEntry->Flags & DIFFICULTY_FLAG_CAN_SELECT))
     {
         TC_LOG_DEBUG("network", "WorldSession::HandleSetDungeonDifficultyOpcode: player {} sent unselectable instance mode {}!",
-            _player->GetGUID().ToString().c_str(), difficultyEntry->ID);
+            _player->GetGUID().ToString(), difficultyEntry->ID);
         return;
     }
 
@@ -913,43 +905,29 @@ void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPackets::Misc::SetDunge
 
     // cannot reset while in an instance
     Map* map = _player->FindMap();
-    if (map && map->IsDungeon())
+    if (map && map->Instanceable())
     {
         TC_LOG_DEBUG("network", "WorldSession::HandleSetDungeonDifficultyOpcode: player (Name: {}, {}) tried to reset the instance while player is inside!",
-            _player->GetName().c_str(), _player->GetGUID().ToString().c_str());
+            _player->GetName(), _player->GetGUID().ToString());
         return;
     }
 
     Group* group = _player->GetGroup();
     if (group)
     {
-        if (group->IsLeader(_player->GetGUID()))
-        {
-            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-            {
-                Player* groupGuy = itr->GetSource();
-                if (!groupGuy)
-                    continue;
+        if (!group->IsLeader(_player->GetGUID()))
+            return;
 
-                if (!groupGuy->IsInWorld())
-                    return;
+        if (group->isLFGGroup())
+            return;
 
-                if (groupGuy->GetMap()->IsNonRaidDungeon())
-                {
-                    TC_LOG_DEBUG("network", "WorldSession::HandleSetDungeonDifficultyOpcode: player {} tried to reset the instance while group member (Name: {}, {}) is inside!",
-                        _player->GetGUID().ToString().c_str(), groupGuy->GetName().c_str(), groupGuy->GetGUID().ToString().c_str());
-                    return;
-                }
-            }
-            // the difficulty is set even if the instances can't be reset
-            //_player->SendDungeonDifficulty(true);
-            group->ResetInstances(INSTANCE_RESET_CHANGE_DIFFICULTY, false, false, _player);
-            group->SetDungeonDifficultyID(difficultyID);
-        }
+        // the difficulty is set even if the instances can't be reset
+        group->ResetInstances(InstanceResetMethod::OnChangeDifficulty, _player);
+        group->SetDungeonDifficultyID(difficultyID);
     }
     else
     {
-        _player->ResetInstances(INSTANCE_RESET_CHANGE_DIFFICULTY, false, false);
+        _player->ResetInstances(InstanceResetMethod::OnChangeDifficulty);
         _player->SetDungeonDifficultyID(difficultyID);
         _player->SendDungeonDifficulty();
     }
@@ -1021,7 +999,7 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPackets::Misc::SetRaidDiff
                 }
             }
             // the difficulty is set even if the instances can't be reset
-            group->ResetInstances(INSTANCE_RESET_CHANGE_DIFFICULTY, true, setRaidDifficulty.Legacy != 0, _player);
+            group->ResetInstances(InstanceResetMethod::OnChangeDifficulty, _player);
             if (setRaidDifficulty.Legacy)
                 group->SetLegacyRaidDifficultyID(difficultyID);
             else
@@ -1030,7 +1008,7 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPackets::Misc::SetRaidDiff
     }
     else
     {
-        _player->ResetInstances(INSTANCE_RESET_CHANGE_DIFFICULTY, true, setRaidDifficulty.Legacy != 0);
+        _player->ResetInstances(InstanceResetMethod::OnChangeDifficulty);
         if (setRaidDifficulty.Legacy)
             _player->SetLegacyRaidDifficultyID(difficultyID);
         else
@@ -1066,12 +1044,12 @@ void WorldSession::HandleInstanceLockResponse(WorldPackets::Instance::InstanceLo
     if (!_player->HasPendingBind())
     {
         TC_LOG_INFO("network", "InstanceLockResponse: Player {} {} tried to bind himself/teleport to graveyard without a pending bind!",
-            _player->GetName().c_str(), _player->GetGUID().ToString().c_str());
+            _player->GetName(), _player->GetGUID().ToString());
         return;
     }
 
     if (packet.AcceptLock)
-        _player->BindToInstance();
+        _player->ConfirmPendingBind();
     else
         _player->RepopAtGraveyard();
 

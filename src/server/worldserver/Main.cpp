@@ -32,7 +32,7 @@
 #include "DatabaseLoader.h"
 #include "DeadlineTimer.h"
 #include "GitRevision.h"
-#include "InstanceSaveMgr.h"
+#include "InstanceLockMgr.h"
 #include "IoContext.h"
 #include "IpNetwork.h"
 #include "MapManager.h"
@@ -318,16 +318,17 @@ extern int main(int argc, char** argv)
     if (!sWorld->SetInitialWorldSettings())
         return 1;
 
-    std::shared_ptr<void> mapManagementHandle(nullptr, [](void*)
-        {
-            // unload battleground templates before different singletons destroyed
-            sBattlegroundMgr->DeleteAllBattlegrounds();
+    auto instanceLockMgrHandle = Trinity::make_unique_ptr_with_deleter<&InstanceLockMgr::Unload>(&sInstanceLockMgr);
 
-            sInstanceSaveMgr->Unload();
-            sOutdoorPvPMgr->Die();                    // unload it before MapManager
-            sMapMgr->UnloadAll();                     // unload all grids (including locked in memory)
-            sTerrainMgr.UnloadAll();
-        });
+    auto terrainMgrHandle = Trinity::make_unique_ptr_with_deleter<&TerrainMgr::UnloadAll>(&sTerrainMgr);
+
+    auto outdoorPvpMgrHandle = Trinity::make_unique_ptr_with_deleter<&OutdoorPvPMgr::Die>(sOutdoorPvPMgr);
+
+    // unload all grids (including locked in memory)
+    auto mapManagementHandle = Trinity::make_unique_ptr_with_deleter<&MapManager::UnloadAll>(sMapMgr);
+
+    // unload battleground templates before different singletons destroyed
+    auto battlegroundMgrHandle = Trinity::make_unique_ptr_with_deleter<&BattlegroundMgr::DeleteAllBattlegrounds>(sBattlegroundMgr);
 
 
     // Start the Remote Access port (acceptor) if enabled

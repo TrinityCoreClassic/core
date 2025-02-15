@@ -106,53 +106,74 @@ enum AchievementFlags
 
 uint32 constexpr ACHIVEMENT_CATEGORY_PET_BATTLES = 15117;
 
-enum AreaFlags
+enum class AreaFlags : uint32
 {
-    AREA_FLAG_SNOW                  = 0x00000001,                // snow (only Dun Morogh, Naxxramas, Razorfen Downs and Winterspring)
-    AREA_FLAG_UNK1                  = 0x00000002,                // Razorfen Downs, Naxxramas and Acherus: The Ebon Hold (3.3.5a)
-    AREA_FLAG_UNK2                  = 0x00000004,                // Only used for areas on map 571 (development before)
-    AREA_FLAG_SLAVE_CAPITAL         = 0x00000008,                // city and city subzones
-    AREA_FLAG_UNK3                  = 0x00000010,                // can't find common meaning
-    AREA_FLAG_SLAVE_CAPITAL2        = 0x00000020,                // slave capital city flag?
-    AREA_FLAG_ALLOW_DUELS           = 0x00000040,                // allow to duel here
-    AREA_FLAG_ARENA                 = 0x00000080,                // arena, both instanced and world arenas
-    AREA_FLAG_CAPITAL               = 0x00000100,                // main capital city flag
-    AREA_FLAG_CITY                  = 0x00000200,                // only for one zone named "City" (where it located?)
-    AREA_FLAG_OUTLAND               = 0x00000400,                // expansion zones? (only Eye of the Storm not have this flag, but have 0x00004000 flag)
-    AREA_FLAG_SANCTUARY             = 0x00000800,                // sanctuary area (PvP disabled)
-    AREA_FLAG_NEED_FLY              = 0x00001000,                // Respawn alive at the graveyard without corpse
-    AREA_FLAG_UNUSED1               = 0x00002000,                // Unused in 3.3.5a
-    AREA_FLAG_OUTLAND2              = 0x00004000,                // expansion zones? (only Circle of Blood Arena not have this flag, but have 0x00000400 flag)
-    AREA_FLAG_OUTDOOR_PVP           = 0x00008000,                // pvp objective area? (Death's Door also has this flag although it's no pvp object area)
-    AREA_FLAG_ARENA_INSTANCE        = 0x00010000,                // used by instanced arenas only
-    AREA_FLAG_UNUSED2               = 0x00020000,                // Unused in 3.3.5a
-    AREA_FLAG_CONTESTED_AREA        = 0x00040000,                // On PvP servers these areas are considered contested, even though the zone it is contained in is a Horde/Alliance territory.
-    AREA_FLAG_UNK6                  = 0x00080000,                // Valgarde and Acherus: The Ebon Hold
-    AREA_FLAG_LOWLEVEL              = 0x00100000,                // used for some starting areas with area_level <= 15
-    AREA_FLAG_TOWN                  = 0x00200000,                // small towns with Inn
-    AREA_FLAG_REST_ZONE_HORDE       = 0x00400000,                // Warsong Hold, Acherus: The Ebon Hold, New Agamand Inn, Vengeance Landing Inn, Sunreaver Pavilion (Something to do with team?)
-    AREA_FLAG_REST_ZONE_ALLIANCE    = 0x00800000,                // Valgarde, Acherus: The Ebon Hold, Westguard Inn, Silver Covenant Pavilion (Something to do with team?)
-    AREA_FLAG_COMBAT                = 0x01000000,                // "combat" area (Script_GetZonePVPInfo), used
-    AREA_FLAG_INSIDE                = 0x02000000,                // used for determinating spell related inside/outside questions in Map::IsOutdoors
-    AREA_FLAG_OUTSIDE               = 0x04000000,                // used for determinating spell related inside/outside questions in Map::IsOutdoors
-    AREA_FLAG_CAN_HEARTH_AND_RESURRECT = 0x08000000,             // Can Hearth And Resurrect From Area
-    AREA_FLAG_NO_FLY_ZONE           = 0x20000000,                // Marks zones where you cannot fly
-    AREA_FLAG_UNK9                  = 0x40000000
+	EmitBreathParticles                 = 0x00000001,
+	BreathParticlesOverrideParent       = 0x00000002,
+	OnMapDungeon                        = 0x00000004,
+	AllowTradeChannel                   = 0x00000008,
+	EnemiesPvPFlagged                   = 0x00000010,
+	AllowResting                        = 0x00000020,
+	AllowDueling                        = 0x00000040,
+	FreeForAllPvP                       = 0x00000080,
+	LinkedChat                          = 0x00000100, // Set in cities
+	LinkedChatSpecialArea               = 0x00000200,
+	ForceThisAreaWhenOnDynamicTransport = 0x00000400,
+	NoPvP                               = 0x00000800,
+	NoGhostOnRelease                    = 0x00001000,
+	SubZoneAmbientMultiplier            = 0x00002000,
+	EnableFlightBoundsOnMap             = 0x00004000,
+	PVPPOI                              = 0x00008000,
+	NoChatChannels                      = 0x00010000,
+	AreaNotInUse                        = 0x00020000,
+	Contested                           = 0x00040000,
+	NoPlayerSummoning                   = 0x00080000,
+	NoDuelingIfTournamentRealm          = 0x00100000,
+	PlayersCallGuards                   = 0x00200000,
+	HordeResting                        = 0x00400000,
+	AllianceResting                     = 0x00800000,
+	CombatZone                          = 0x01000000,
+	ForceIndoors                        = 0x02000000,
+	ForceOutdoors                       = 0x04000000,
+	AllowHearthAndRessurectFromArea     = 0x08000000,
+	NoLocalDefenseChannel               = 0x10000000,
+	OnlyEvaluateGhostBindOnce           = 0x20000000,
+	IsSubzone                           = 0x40000000,
+	DontEvaluateGraveyardFromClient     = 0x80000000
 };
 
-enum AreaFlags2
+DEFINE_ENUM_FLAG(AreaFlags);
+
+enum class AreaFlags2 : uint32
 {
-    AREA_FLAG_2_DONT_SHOW_SANCTUARY = 0x00000200,                // Hides sanctuary status from zone text color (Script_GetZonePVPInfo)
-    AREA_FLAG_2_CAN_ENABLE_WAR_MODE = 0x00001000,                // Allows enabling war mode
+	ForceMicroDungeonArtMap             = 0x00000001, // Ask Programmer
+	UseSubzonePlayerLoot                = 0x00000002,
+	AllowPetBattleDuelingEvenIfNoDuelingAllowed = 0x00000004,
+	UseMapTransferLocsForCemeteries     = 0x00000008,
+	IsGarrison                          = 0x00000010,
+	UseSubzoneForChatChannel            = 0x00000020,
+	DontRealmCoalesceChatChannel        = 0x00000040,
+	NotExplorable                       = 0x00000080, // Don't assign area bit
+	DontUseParentMapForCemeteries       = 0x00000100,
+	DontShowSanctuaryText               = 0x00000200,
+	CrossFactionZoneChat                = 0x00000400,
+	ForceNoResting                      = 0x00000800,
+	AllowWarModeToggle                  = 0x00001000
 };
 
-enum AreaMountFlags
+DEFINE_ENUM_FLAG(AreaFlags2);
+
+enum class AreaMountFlags : uint8
 {
-    AREA_MOUNT_FLAG_GROUND_ALLOWED      = 0x1,
-    AREA_MOUNT_FLAG_FLYING_ALLOWED      = 0x2,
-    AREA_MOUNT_FLAG_FLOAT_ALLOWED       = 0x4,
-    AREA_MOUNT_FLAG_UNDERWATER_ALLOWED  = 0x8
+    None                            = 0x0,
+    AllowGroundMounts               = 0x1,
+    AllowFlyingMounts               = 0x2,
+    AllowSurfaceSwimmingMounts      = 0x4,
+    AllowUnderwaterSwimmingMounts   = 0x8,
+    ClientEnforcesMount             = 0x10
 };
+
+DEFINE_ENUM_FLAG(AreaMountFlags);
 
 enum class BattlePetSpeciesFlags : uint16
 {
@@ -346,7 +367,7 @@ enum class CriteriaFlags : uint8
 
 DEFINE_ENUM_FLAG(CriteriaFlags);
 
-enum class CriteriaType : uint8
+enum class CriteriaType : int16
 {
     KillCreature                                   = 0,   // Kill NPC "{Creature}"
     WinBattleground                                = 1,   // Win battleground "{Map}"
@@ -582,7 +603,27 @@ enum class CriteriaType : uint8
     SpentTalentPoint                               = 231, /*NYI*/ // (Player) spent talent point
 
     MythicPlusDisplaySeasonEnded                   = 234, /*NYI*/ // {DisplaySeason}
-    Count
+
+    WinRatedSoloShuffleRound                       = 239, /*NYI*/
+    ParticipateInRatedSoloShuffleRound             = 240, /*NYI*/
+
+    ReputationAmountGained                         = 243, /*NYI*/ // Gain reputation amount with {FactionID}; accumulate, not highest
+
+    FulfillAnyCraftingOrder                        = 245, /*NYI*/
+    FulfillCraftingOrderType                       = 246, /*NYI*/ // {CraftingOrderType}
+
+    PerksProgramMonthComplete                      = 249, /*NYI*/
+    CompleteTrackingQuest                          = 250, /*NYI*/
+
+    GainLevels                                     = 253, // Gain levels
+
+    CompleteQuestsCountOnAccount                   = 257, /*NYI*/
+
+    WarbandBankTabPurchased                        = 260, /*NYI*/
+    ReachRenownLevel                               = 261,
+    LearnTaxiNode                                  = 262,
+
+    Count                                          = 264
 };
 
 enum class CriteriaTreeFlags : uint16
@@ -768,13 +809,70 @@ enum MapTypes                                               // Lua_IsInInstance
     MAP_SCENARIO        = 5                                 // scenario
 };
 
-enum MapFlags
+enum class MapFlags : uint32
 {
-    MAP_FLAG_CAN_TOGGLE_DIFFICULTY  = 0x0100,
-    MAP_FLAG_FLEX_LOCKING           = 0x8000, // All difficulties share completed encounters lock, not bound to a single instance id
-                                              // heroic difficulty flag overrides it and uses instance id bind
-    MAP_FLAG_GARRISON               = 0x4000000
+    Optimize                    = 0x00000001,
+    DevelopmentMap              = 0x00000002,
+    WeightedBlend               = 0x00000004,
+    VertexColoring              = 0x00000008,
+    SortObjects                 = 0x00000010,
+    LimitToPlayersFromOneRealm  = 0x00000020,
+    EnableLighting              = 0x00000040,
+    InvertedTerrain             = 0x00000080,
+    DynamicDifficulty           = 0x00000100,
+    ObjectFile                  = 0x00000200,
+    TextureFile                 = 0x00000400,
+    GenerateNormals             = 0x00000800,
+    FixBorderShadowSeams        = 0x00001000,
+    InfiniteOcean               = 0x00002000,
+    UnderwaterMap               = 0x00004000,
+    FlexibleRaidLocking         = 0x00008000,
+    LimitFarclip                = 0x00010000,
+    UseParentMapFlightBounds    = 0x00020000,
+    NoRaceChangeOnThisMap       = 0x00040000,
+    DisabledForNonGMs           = 0x00080000,
+    WeightedNormals1            = 0x00100000,
+    DisableLowDetailTerrain     = 0x00200000,
+    EnableOrgArenaBlinkRule     = 0x00400000,
+    WeightedHeightBlend         = 0x00800000,
+    CoalescingAreaSharing       = 0x01000000,
+    ProvingGrounds              = 0x02000000,
+    Garrison                    = 0x04000000,
+    EnableAINeedSystem          = 0x08000000,
+    SingleVServer               = 0x10000000,
+    UseInstancePool             = 0x20000000,
+    MapUsesRaidGraphics         = 0x40000000,
+    ForceCustomUIMap            = 0x80000000,
 };
+
+DEFINE_ENUM_FLAG(MapFlags);
+
+enum class MapFlags2 : uint32
+{
+    DontActivateShowMap                         = 0x00000001,
+    NoVoteKicks                                 = 0x00000002,
+    NoIncomingTransfers                         = 0x00000004,
+    DontVoxelizePathData                        = 0x00000008,
+    TerrainLOD                                  = 0x00000010,
+    UnclampedPointLights                        = 0x00000020,
+    PVP                                         = 0x00000040,
+    IgnoreInstanceFarmLimit                     = 0x00000080,
+    DontInheritAreaLightsFromParent             = 0x00000100,
+    ForceLightBufferOn                          = 0x00000200,
+    WMOLiquidScale                              = 0x00000400,
+    SpellClutterOn                              = 0x00000800,
+    SpellClutterOff                             = 0x00001000,
+    ReducedPathMapHeightValidation              = 0x00002000,
+    NewMinimapGeneration                        = 0x00004000,
+    AIBotsDetectedLikePlayers                   = 0x00008000,
+    LinearlyLitTerrain                          = 0x00010000,
+    FogOfWar                                    = 0x00020000,
+    DisableSharedWeatherSystems                 = 0x00040000,
+    HonorSpellAttribute11LosHitsNocamcollide    = 0x00080000,
+    BelongsToLayer                              = 0x00100000,
+};
+
+DEFINE_ENUM_FLAG(MapFlags2);
 
 enum GlyphSlotType
 {
@@ -996,9 +1094,22 @@ enum ItemSpecStat
     ITEM_SPEC_STAT_NONE             = 40
 };
 
-enum MapDifficultyFlags : uint8
+enum class MapDifficultyFlags : uint8
 {
-    MAP_DIFFICULTY_FLAG_CANNOT_EXTEND   = 0x10
+    LimitToPlayersFromOneRealm = 0x01,
+    UseLootBasedLockInsteadOfInstanceLock = 0x02, // Lock to single encounters
+    LockedToSoloOwner = 0x04,
+    ResumeDungeonProgressBasedOnLockout = 0x08, // Mythic dungeons with this flag zone into leaders instance instead of always using a fresh one (Return to Karazhan, Operation: Mechagon)
+    DisableLockExtension = 0x10,
+};
+
+DEFINE_ENUM_FLAG(MapDifficultyFlags);
+
+enum MapDifficultyResetInterval : uint8
+{
+    MAP_DIFFICULTY_RESET_ANYTIME = 0,
+    MAP_DIFFICULTY_RESET_DAILY = 1,
+    MAP_DIFFICULTY_RESET_WEEKLY = 2
 };
 
 enum class ModifierTreeType : int32

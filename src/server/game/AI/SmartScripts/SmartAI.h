@@ -50,7 +50,7 @@ class TC_GAME_API SmartAI : public CreatureAI
 
         // Start moving to the desired MovePoint
         void StartPath(bool run = false, uint32 pathId = 0, bool repeat = false, Unit* invoker = nullptr, uint32 nodeId = 1);
-        bool LoadPath(uint32 entry);
+		WaypointPath const* LoadPath(uint32 entry);
         void PausePath(uint32 delay, bool forced = false);
         bool CanResumePath();
         void StopPath(uint32 DespawnTime = 0, uint32 quest = 0, bool fail = false);
@@ -97,7 +97,7 @@ class TC_GAME_API SmartAI : public CreatureAI
         void JustEngagedWith(Unit* enemy) override;
 
         // Called for reaction at stopping attack at no attackers or targets
-        void EnterEvadeMode(EvadeReason why = EVADE_REASON_OTHER) override;
+        void EnterEvadeMode(EvadeReason why = EvadeReason::Other) override;
 
         // Called when the creature is killed
         void JustDied(Unit* killer) override;

@@ -48,29 +48,29 @@ static BossBoundaryData const boundaries =
 
 static DoorData const doorData[] =
 {
-    { GO_LEVIATHAN_DOOR,                DATA_FLAME_LEVIATHAN,   DOOR_TYPE_ROOM },
-    { GO_XT_002_DOOR,                   DATA_XT002,             DOOR_TYPE_ROOM },
-    { GO_IRON_COUNCIL_DOOR,             DATA_ASSEMBLY_OF_IRON,  DOOR_TYPE_ROOM },
-    { GO_ARCHIVUM_DOOR,                 DATA_ASSEMBLY_OF_IRON,  DOOR_TYPE_PASSAGE },
-    { GO_HODIR_ENTRANCE,                DATA_HODIR,             DOOR_TYPE_ROOM },
-    { GO_HODIR_DOOR,                    DATA_HODIR,             DOOR_TYPE_PASSAGE },
-    { GO_HODIR_ICE_DOOR,                DATA_HODIR,             DOOR_TYPE_PASSAGE },
-    { GO_MIMIRON_DOOR_1,                DATA_MIMIRON,           DOOR_TYPE_ROOM },
-    { GO_MIMIRON_DOOR_2,                DATA_MIMIRON,           DOOR_TYPE_ROOM },
-    { GO_MIMIRON_DOOR_3,                DATA_MIMIRON,           DOOR_TYPE_ROOM },
-    { GO_THORIM_ENCOUNTER_DOOR,         DATA_THORIM,            DOOR_TYPE_ROOM },
-    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_HODIR,             DOOR_TYPE_PASSAGE },
-    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_MIMIRON,           DOOR_TYPE_PASSAGE },
-    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_THORIM,            DOOR_TYPE_PASSAGE },
-    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_FREYA,             DOOR_TYPE_PASSAGE },
-    { GO_VEZAX_DOOR,                    DATA_VEZAX,             DOOR_TYPE_PASSAGE },
-    { GO_YOGG_SARON_DOOR,               DATA_YOGG_SARON,        DOOR_TYPE_ROOM },
-    { GO_DOODAD_UL_SIGILDOOR_03,        DATA_ALGALON,           DOOR_TYPE_ROOM },
-    { GO_DOODAD_UL_UNIVERSEFLOOR_01,    DATA_ALGALON,           DOOR_TYPE_ROOM },
-    { GO_DOODAD_UL_UNIVERSEFLOOR_02,    DATA_ALGALON,           DOOR_TYPE_SPAWN_HOLE },
-    { GO_DOODAD_UL_UNIVERSEGLOBE01,     DATA_ALGALON,           DOOR_TYPE_SPAWN_HOLE },
-    { GO_DOODAD_UL_ULDUAR_TRAPDOOR_03,  DATA_ALGALON,           DOOR_TYPE_SPAWN_HOLE },
-    { 0,                                0,                      DOOR_TYPE_ROOM },
+    { GO_LEVIATHAN_DOOR,                DATA_FLAME_LEVIATHAN,   EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_XT_002_DOOR,                   DATA_XT002,             EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_IRON_COUNCIL_DOOR,             DATA_ASSEMBLY_OF_IRON,  EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_ARCHIVUM_DOOR,                 DATA_ASSEMBLY_OF_IRON,  EncounterDoorBehavior::OpenWhenDone },
+    { GO_HODIR_ENTRANCE,                DATA_HODIR,             EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_HODIR_DOOR,                    DATA_HODIR,             EncounterDoorBehavior::OpenWhenDone },
+    { GO_HODIR_ICE_DOOR,                DATA_HODIR,             EncounterDoorBehavior::OpenWhenDone },
+    { GO_MIMIRON_DOOR_1,                DATA_MIMIRON,           EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_MIMIRON_DOOR_2,                DATA_MIMIRON,           EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_MIMIRON_DOOR_3,                DATA_MIMIRON,           EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_THORIM_ENCOUNTER_DOOR,         DATA_THORIM,            EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_HODIR,             EncounterDoorBehavior::OpenWhenDone },
+    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_MIMIRON,           EncounterDoorBehavior::OpenWhenDone },
+    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_THORIM,            EncounterDoorBehavior::OpenWhenDone },
+    { GO_ANCIENT_GATE_OF_THE_KEEPERS,   DATA_FREYA,             EncounterDoorBehavior::OpenWhenDone },
+    { GO_VEZAX_DOOR,                    DATA_VEZAX,             EncounterDoorBehavior::OpenWhenDone },
+    { GO_YOGG_SARON_DOOR,               DATA_YOGG_SARON,        EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_DOODAD_UL_SIGILDOOR_03,        DATA_ALGALON,           EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_DOODAD_UL_UNIVERSEFLOOR_01,    DATA_ALGALON,           EncounterDoorBehavior::OpenWhenNotInProgress },
+    { GO_DOODAD_UL_UNIVERSEFLOOR_02,    DATA_ALGALON,           EncounterDoorBehavior::OpenWhenInProgress },
+    { GO_DOODAD_UL_UNIVERSEGLOBE01,     DATA_ALGALON,           EncounterDoorBehavior::OpenWhenInProgress },
+    { GO_DOODAD_UL_ULDUAR_TRAPDOOR_03,  DATA_ALGALON,           EncounterDoorBehavior::OpenWhenInProgress },
+    { 0,                                0,                      EncounterDoorBehavior::OpenWhenNotInProgress },
 };
 
 MinionData const minionData[] =
@@ -349,28 +349,24 @@ class instance_ulduar : public InstanceMapScript
                     case NPC_FREYA_YS:
                         KeeperGUIDs[0] = creature->GetGUID();
                         _summonYSKeeper[0] = false;
-                        SaveToDB();
                         ++keepersCount;
                         DoUpdateWorldState(WORLD_STATE_YOGG_SARON_KEEPERS, keepersCount);
                         break;
                     case NPC_HODIR_YS:
                         KeeperGUIDs[1] = creature->GetGUID();
                         _summonYSKeeper[1] = false;
-                        SaveToDB();
                         ++keepersCount;
                         DoUpdateWorldState(WORLD_STATE_YOGG_SARON_KEEPERS, keepersCount);
                         break;
                     case NPC_THORIM_YS:
                         KeeperGUIDs[2] = creature->GetGUID();
                         _summonYSKeeper[2] = false;
-                        SaveToDB();
                         ++keepersCount;
                         DoUpdateWorldState(WORLD_STATE_YOGG_SARON_KEEPERS, keepersCount);
                         break;
                     case NPC_MIMIRON_YS:
                         KeeperGUIDs[3] = creature->GetGUID();
                         _summonYSKeeper[3] = false;
-                        SaveToDB();
                         ++keepersCount;
                         DoUpdateWorldState(WORLD_STATE_YOGG_SARON_KEEPERS, keepersCount);
                         break;
@@ -534,7 +530,6 @@ class instance_ulduar : public InstanceMapScript
                         if (GetBossState(i) == IN_PROGRESS)
                         {
                             _CoUAchivePlayerDeathMask |= (1 << i);
-                            SaveToDB();
                         }
                     }
                 }
@@ -747,7 +742,6 @@ class instance_ulduar : public InstanceMapScript
                         if (data >= 2 && GetBossState(DATA_FLAME_LEVIATHAN) == NOT_STARTED)
                         {
                             _events.ScheduleEvent(EVENT_LEVIATHAN_BREAK_DOOR, 5s);
-                            SaveToDB();
                         }
                         break;
                     case DATA_HODIR_RARE_CACHE:
@@ -925,52 +919,19 @@ class instance_ulduar : public InstanceMapScript
                 return false;
             }
 
-            void WriteSaveDataMore(std::ostringstream& data) override
+            void AfterDataLoad() override
             {
-                data << ColossusData << ' ' << _algalonTimer << ' ' << uint32(_algalonSummoned ? 1 : 0);
+                if (GetBossState(DATA_FLAME_LEVIATHAN) == DONE)
+                    SetData(DATA_COLOSSUS, DONE);
 
-                for (uint8 i = 0; i < 4; ++i)
-                    data << ' ' << uint32(!KeeperGUIDs[i].IsEmpty() ? 1 : 0);
-
-                data << ' ' << _CoUAchivePlayerDeathMask;
-            }
-
-            void ReadSaveDataMore(std::istringstream& data) override
-            {
-                uint32 tempState;
-                data >> tempState;
-                SetData(DATA_COLOSSUS, tempState);
-
-                data >> _algalonTimer;
-                data >> tempState;
-                _algalonSummoned = tempState != 0;
-                if (_algalonSummoned && GetBossState(DATA_ALGALON) != DONE)
-                {
-                    _summonAlgalon = true;
-                    if (_algalonTimer && _algalonTimer <= 60)
-                    {
-                        _events.ScheduleEvent(EVENT_UPDATE_ALGALON_TIMER, 1min);
-                        DoUpdateWorldState(WORLD_STATE_ALGALON_TIMER_ENABLED, 1);
-                        DoUpdateWorldState(WORLD_STATE_ALGALON_DESPAWN_TIMER, _algalonTimer);
-                    }
-                }
-
-                for (uint8 i = 0; i < 4; ++i)
-                {
-                    data >> tempState;
-                    _summonYSKeeper[i] = tempState != 0;
-                }
-
-                if (GetBossState(DATA_FREYA) == DONE && !_summonYSKeeper[0])
+                if (GetBossState(DATA_FREYA) == DONE)
                     _summonObservationRingKeeper[0] = true;
-                if (GetBossState(DATA_HODIR) == DONE && !_summonYSKeeper[1])
+                if (GetBossState(DATA_HODIR) == DONE)
                     _summonObservationRingKeeper[1] = true;
-                if (GetBossState(DATA_THORIM) == DONE && !_summonYSKeeper[2])
+                if (GetBossState(DATA_THORIM) == DONE)
                     _summonObservationRingKeeper[2] = true;
-                if (GetBossState(DATA_MIMIRON) == DONE && !_summonYSKeeper[3])
+                if (GetBossState(DATA_MIMIRON) == DONE)
                     _summonObservationRingKeeper[3] = true;
-
-                data >> _CoUAchivePlayerDeathMask;
             }
 
             void Update(uint32 diff) override
@@ -985,7 +946,6 @@ class instance_ulduar : public InstanceMapScript
                     switch (eventId)
                     {
                         case EVENT_UPDATE_ALGALON_TIMER:
-                            SaveToDB();
                             DoUpdateWorldState(WORLD_STATE_ALGALON_DESPAWN_TIMER, --_algalonTimer);
                             if (_algalonTimer)
                                 _events.ScheduleEvent(EVENT_UPDATE_ALGALON_TIMER, 1min);
@@ -1026,8 +986,8 @@ class instance_ulduar : public InstanceMapScript
 
             void UpdateDoorState(GameObject* door) override
             {
-                // Leviathan doors are set to DOOR_TYPE_ROOM except the one it uses to enter the room
-                // which has to be set to DOOR_TYPE_PASSAGE
+                // Leviathan doors are set to EncounterDoorBehavior::OpenWhenNotInProgress except the one it uses to enter the room
+                // which has to be set to EncounterDoorBehavior::OpenWhenDone
                 if (door->GetEntry() == GO_LEVIATHAN_DOOR && door->GetPositionX() > 400.f)
                     door->SetGoState(GetBossState(DATA_FLAME_LEVIATHAN) == DONE ? GO_STATE_ACTIVE : GO_STATE_READY);
                 else
@@ -1041,9 +1001,9 @@ class instance_ulduar : public InstanceMapScript
                 if (door->GetEntry() == GO_LEVIATHAN_DOOR && door->GetPositionX() > 400.f)
                 {
                     if (add)
-                        GetBossInfo(DATA_FLAME_LEVIATHAN)->door[DOOR_TYPE_PASSAGE].insert(door->GetGUID());
+                        GetBossInfo(DATA_FLAME_LEVIATHAN)->door[uint32(EncounterDoorBehavior::OpenWhenDone)].insert(door->GetGUID());
                     else
-                        GetBossInfo(DATA_FLAME_LEVIATHAN)->door[DOOR_TYPE_PASSAGE].erase(door->GetGUID());
+                        GetBossInfo(DATA_FLAME_LEVIATHAN)->door[uint32(EncounterDoorBehavior::OpenWhenDone)].erase(door->GetGUID());
 
                     if (add)
                         UpdateDoorState(door);

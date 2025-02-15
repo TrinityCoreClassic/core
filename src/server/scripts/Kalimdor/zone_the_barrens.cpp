@@ -116,7 +116,7 @@ public:
                 me->SetStandState(UNIT_STAND_STATE_STAND);
 
                 Talk(SAY_GIL_START, player);
-                Start(false, false, player->GetGUID(), quest);
+                Start(false, player->GetGUID());
             }
         }
     };
@@ -506,9 +506,6 @@ public:
                 case 0:
                     Talk(SAY_STARTUP1);
                     break;
-                case 9:
-                    SetRun(false);
-                    break;
                 case 17:
                     if (Creature* temp = me->SummonCreature(NPC_MERCENARY, 1128.489f, -3037.611f, 92.701f, 1.472f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 2min))
                     {
@@ -536,7 +533,6 @@ public:
                     break;
                 case 18:
                     Talk(SAY_PROGRESS_1, player);
-                    SetRun();
                     break;
             }
         }
@@ -599,7 +595,7 @@ public:
                 me->SetFaction(FACTION_RATCHET);
                 Talk(SAY_START);
                 SetDespawnAtEnd(false);
-                Start(true, false, player->GetGUID());
+                Start(true, player->GetGUID());
             }
         }
     };

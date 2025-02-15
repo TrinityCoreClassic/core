@@ -186,7 +186,7 @@ struct npc_emily : public EscortAI
             if (Creature* Mrfloppy = GetClosestCreatureWithEntry(me, NPC_MRFLOPPY, 180.0f))
                 Mrfloppy->GetMotionMaster()->MoveFollow(me, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
 
-            Start(true, false, player->GetGUID());
+            Start(true, player->GetGUID());
         }
     }
 

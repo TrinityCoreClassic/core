@@ -698,7 +698,7 @@ struct boss_illidan_stormrage : public BossAI
                 if (player->IsAlive() && !player->IsGameMaster() && IsInBoundary(player))
                     return;
 
-        EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
+        EnterEvadeMode(EvadeReason::NoHostiles);
     }
 
     void SummonMinions()

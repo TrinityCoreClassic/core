@@ -635,7 +635,7 @@ public:
                 Talk(SAY_WIL_START, player);
                 me->SetFaction(FACTION_EARTHEN_RING);
 
-                Start(false, false, player->GetGUID(), quest);
+                Start(false, player->GetGUID(), quest);
             }
         }
     };

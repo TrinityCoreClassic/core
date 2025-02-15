@@ -2089,7 +2089,7 @@ INSERT INTO `rbac_permissions` VALUES
 (703,'Command: reload spell_group_stack_rules'),
 (704,'Command: reload trinity_string'),
 (706,'Command: reload waypoint_scripts'),
-(707,'Command: reload waypoint_data'),
+(707,'Command: reload waypoint_path'),
 (708,'Command: reload vehicle_accessory'),
 (709,'Command: reload vehicle_template_accessory'),
 (710,'Command: reset'),

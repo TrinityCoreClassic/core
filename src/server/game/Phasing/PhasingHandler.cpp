@@ -564,23 +564,23 @@ bool PhasingHandler::InDbPhaseShift(WorldObject const* object, uint8 phaseUseFla
     return object->GetPhaseShift().CanSee(phaseShift);
 }
 
-uint32 PhasingHandler::GetTerrainMapId(PhaseShift const& phaseShift, TerrainInfo const* terrain, float x, float y)
+uint32 PhasingHandler::GetTerrainMapId(PhaseShift const& phaseShift, uint32 mapId, TerrainInfo const* terrain, float x, float y)
 {
-    if (phaseShift.VisibleMapIds.empty())
-        return terrain->GetId();
+	if (phaseShift.VisibleMapIds.empty())
+		return mapId;
 
-    if (phaseShift.VisibleMapIds.size() == 1)
-        return phaseShift.VisibleMapIds.begin()->first;
+	if (phaseShift.VisibleMapIds.size() == 1)
+		return phaseShift.VisibleMapIds.begin()->first;
 
-    GridCoord gridCoord = Trinity::ComputeGridCoord(x, y);
-    int32 gx = (MAX_NUMBER_OF_GRIDS - 1) - gridCoord.x_coord;
-    int32 gy = (MAX_NUMBER_OF_GRIDS - 1) - gridCoord.y_coord;
+	GridCoord gridCoord = Trinity::ComputeGridCoord(x, y);
+	int32 gx = (MAX_NUMBER_OF_GRIDS - 1) - gridCoord.x_coord;
+	int32 gy = (MAX_NUMBER_OF_GRIDS - 1) - gridCoord.y_coord;
 
-    for (std::pair<uint32 const, PhaseShift::VisibleMapIdRef> const& visibleMap : phaseShift.VisibleMapIds)
-        if (terrain->HasChildTerrainGridFile(visibleMap.first, gx, gy))
-            return visibleMap.first;
+	for (std::pair<uint32 const, PhaseShift::VisibleMapIdRef> const& visibleMap : phaseShift.VisibleMapIds)
+		if (terrain->HasChildTerrainGridFile(visibleMap.first, gx, gy))
+			return visibleMap.first;
 
-    return terrain->GetId();
+	return mapId;
 }
 
 void PhasingHandler::SetAlwaysVisible(WorldObject* object, bool apply, bool updateVisibility)

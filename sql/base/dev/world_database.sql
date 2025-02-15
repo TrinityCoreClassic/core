@@ -3646,25 +3646,6 @@ CREATE TABLE `script_spline_chain_waypoints` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `script_waypoint`
---
-
-DROP TABLE IF EXISTS `script_waypoint`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `script_waypoint` (
-  `entry` int unsigned NOT NULL DEFAULT '0' COMMENT 'creature_template entry',
-  `pointid` int unsigned NOT NULL DEFAULT '0',
-  `location_x` float NOT NULL DEFAULT '0',
-  `location_y` float NOT NULL DEFAULT '0',
-  `location_z` float NOT NULL DEFAULT '0',
-  `waittime` int unsigned NOT NULL DEFAULT '0' COMMENT 'waittime in millisecs',
-  `point_comment` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  PRIMARY KEY (`entry`,`pointid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Script Creature waypoints';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `serverside_spell`
 --
 
@@ -4615,71 +4596,41 @@ CREATE TABLE `warden_checks` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `waypoint_data`
+-- Table structure for table `waypoint_path`
 --
 
-DROP TABLE IF EXISTS `waypoint_data`;
+DROP TABLE IF EXISTS `waypoint_path`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `waypoint_data` (
-  `id` int unsigned NOT NULL DEFAULT '0' COMMENT 'Creature GUID',
-  `point` int unsigned NOT NULL DEFAULT '0',
-  `position_x` float NOT NULL DEFAULT '0',
-  `position_y` float NOT NULL DEFAULT '0',
-  `position_z` float NOT NULL DEFAULT '0',
-  `orientation` float DEFAULT NULL,
-  `delay` int unsigned NOT NULL DEFAULT '0',
-  `move_type` int NOT NULL DEFAULT '0',
-  `action` int NOT NULL DEFAULT '0',
-  `action_chance` smallint NOT NULL DEFAULT '100',
-  `wpguid` bigint unsigned NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`,`point`)
+CREATE TABLE `waypoint_path` (
+  `PathId` int unsigned NOT NULL,
+  `MoveType` tinyint unsigned NOT NULL DEFAULT '0',
+  `Flags` tinyint unsigned NOT NULL DEFAULT '0',
+  `Velocity` float DEFAULT NULL,
+  `Comment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`PathId`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `waypoint_path_node`
+--
+
+DROP TABLE IF EXISTS `waypoint_path_node`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `waypoint_path_node` (
+  `PathId` int unsigned NOT NULL DEFAULT '0',
+  `NodeId` int unsigned NOT NULL DEFAULT '0',
+  `PositionX` float NOT NULL DEFAULT '0',
+  `PositionY` float NOT NULL DEFAULT '0',
+  `PositionZ` float NOT NULL DEFAULT '0',
+  `Orientation` float DEFAULT NULL,
+  `Delay` int unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`PathId`,`NodeId`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Table structure for table `waypoint_scripts`
---
-
-DROP TABLE IF EXISTS `waypoint_scripts`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `waypoint_scripts` (
-  `id` int unsigned NOT NULL DEFAULT '0',
-  `delay` int unsigned NOT NULL DEFAULT '0',
-  `command` int unsigned NOT NULL DEFAULT '0',
-  `datalong` int unsigned NOT NULL DEFAULT '0',
-  `datalong2` int unsigned NOT NULL DEFAULT '0',
-  `dataint` int unsigned NOT NULL DEFAULT '0',
-  `x` float NOT NULL DEFAULT '0',
-  `y` float NOT NULL DEFAULT '0',
-  `z` float NOT NULL DEFAULT '0',
-  `o` float NOT NULL DEFAULT '0',
-  `guid` int NOT NULL DEFAULT '0',
-  `Comment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  PRIMARY KEY (`guid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `waypoints`
---
-
-DROP TABLE IF EXISTS `waypoints`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `waypoints` (
-  `entry` int unsigned NOT NULL DEFAULT '0',
-  `pointid` int unsigned NOT NULL DEFAULT '0',
-  `position_x` float NOT NULL DEFAULT '0',
-  `position_y` float NOT NULL DEFAULT '0',
-  `position_z` float NOT NULL DEFAULT '0',
-  `orientation` float DEFAULT NULL,
-  `delay` int unsigned NOT NULL DEFAULT '0',
-  `point_comment` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  PRIMARY KEY (`entry`,`pointid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Creature waypoints';
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `world_safe_locs`
