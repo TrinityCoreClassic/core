@@ -38,6 +38,8 @@
 #include "Transport.h"
 #include "Unit.h"
 #include "UpdateData.h"
+#include "ZoneScript.h"
+#include "advstd.h"
 
 AreaTrigger::AreaTrigger() : WorldObject(false), MapObject(), _spawnId(0), _aurEff(nullptr), _maxSearchRadius(0.0f),
     _duration(0), _totalDuration(0), _timeSinceCreated(0), _previousCheckOrientation(std::numeric_limits<float>::infinity()),
@@ -63,6 +65,9 @@ void AreaTrigger::AddToWorld()
     ///- Register the AreaTrigger for guid lookup and for caster
     if (!IsInWorld())
     {
+        if (m_zoneScript)
+            m_zoneScript->OnAreaTriggerCreate(this);
+
         GetMap()->GetObjectsStore().Insert<AreaTrigger>(this);
         if (_spawnId)
             GetMap()->GetAreaTriggerBySpawnIdStore().insert(std::make_pair(_spawnId, this));
@@ -76,6 +81,9 @@ void AreaTrigger::RemoveFromWorld()
     ///- Remove the AreaTrigger from the accessor and from all lists of objects in world
     if (IsInWorld())
     {
+        if (m_zoneScript)
+            m_zoneScript->OnAreaTriggerRemove(this);
+
         _isRemoved = true;
 
         if (Unit* caster = GetCaster())
@@ -1012,6 +1020,22 @@ void AreaTrigger::AI_Initialize()
 void AreaTrigger::AI_Destroy()
 {
     _ai.reset();
+}
+
+bool AreaTrigger::IsNeverVisibleFor(WorldObject const* seer, bool allowServersideObjects) const
+{
+    if (WorldObject::IsNeverVisibleFor(seer, allowServersideObjects))
+        return true;
+
+    if (IsServerSide() && !allowServersideObjects)
+    {
+        if (Player const* seerPlayer = seer->ToPlayer())
+            return !seerPlayer->isDebugAreaTriggers;
+
+        return true;
+    }
+
+    return false;
 }
 
 void AreaTrigger::BuildValuesCreate(ByteBuffer* data, Player const* target) const

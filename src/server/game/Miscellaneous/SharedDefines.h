@@ -1088,6 +1088,20 @@ enum TeamId
     TEAM_NEUTRAL
 };
 
+constexpr TeamId GetOtherTeam(TeamId team)
+{
+    switch (team)
+    {
+    case TEAM_ALLIANCE:
+        return TEAM_HORDE;
+    case TEAM_HORDE:
+        return TEAM_ALLIANCE;
+    default:
+        break;
+    }
+    return TEAM_NEUTRAL;
+}
+
 enum Team
 {
     HORDE               = 67,
@@ -4604,6 +4618,13 @@ enum CreatureEliteType
     CREATURE_ELITE_RARE            = 4,
     CREATURE_ELITE_TRIVIAL         = 5, // found in 2.2.3 for 2 mobs
     CREATURE_WEAK                  = 6
+};
+
+enum class StringIdType : int32
+{
+    Template = 0,
+    Spawn = 1,
+    Script = 2
 };
 
 // Holidays.dbc (9.0.2.37176)

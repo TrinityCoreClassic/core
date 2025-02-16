@@ -811,6 +811,7 @@ struct GameObjectTemplate
 
     std::string AIName;
     uint32 ScriptId;
+    std::string StringId;
     WorldPacket QueryData[TOTAL_LOCALES];
 
     // helpers
@@ -836,6 +837,46 @@ struct GameObjectTemplate
             case GAMEOBJECT_TYPE_SPELLCASTER:   return spellCaster.allowMounted != 0;
             case GAMEOBJECT_TYPE_UI_LINK:       return UILink.allowMounted != 0;
             default: return false;
+        }
+    }
+
+    uint32 GetQuestID() const
+    {
+        switch (type)
+        {
+        case GAMEOBJECT_TYPE_CHEST: return chest.questID;
+        case GAMEOBJECT_TYPE_GENERIC: return generic.questID;
+        case GAMEOBJECT_TYPE_SPELL_FOCUS: return spellFocus.questID;
+        case GAMEOBJECT_TYPE_GOOBER: return goober.questID;
+        default: return 0;
+        }
+    }
+
+    uint32 GetConditionID1() const
+    {
+        switch (type)
+        {
+        case GAMEOBJECT_TYPE_DOOR:           return door.conditionID1;
+        case GAMEOBJECT_TYPE_BUTTON:         return button.conditionID1;
+        case GAMEOBJECT_TYPE_QUESTGIVER:     return questgiver.conditionID1;
+        case GAMEOBJECT_TYPE_CHEST:          return chest.conditionID1;
+        case GAMEOBJECT_TYPE_GENERIC:        return generic.conditionID1;
+        case GAMEOBJECT_TYPE_TRAP:           return trap.conditionID1;
+        case GAMEOBJECT_TYPE_CHAIR:          return chair.conditionID1;
+        case GAMEOBJECT_TYPE_SPELL_FOCUS:    return spellFocus.conditionID1;
+        case GAMEOBJECT_TYPE_TEXT:           return text.conditionID1;
+        case GAMEOBJECT_TYPE_GOOBER:         return goober.conditionID1;
+        case GAMEOBJECT_TYPE_CAMERA:         return camera.conditionID1;
+        case GAMEOBJECT_TYPE_RITUAL:         return ritual.conditionID1;
+        case GAMEOBJECT_TYPE_MAILBOX:        return mailbox.conditionID1;
+        case GAMEOBJECT_TYPE_SPELLCASTER:    return spellCaster.conditionID1;
+        case GAMEOBJECT_TYPE_FLAGSTAND:      return flagStand.conditionID1;
+        case GAMEOBJECT_TYPE_AURA_GENERATOR: return auraGenerator.conditionID1;
+        case GAMEOBJECT_TYPE_GUILD_BANK:     return guildbank.conditionID1;
+        case GAMEOBJECT_TYPE_NEW_FLAG:       return newflag.conditionID1;
+        case GAMEOBJECT_TYPE_ITEM_FORGE:     return itemForge.conditionID1;
+        case GAMEOBJECT_TYPE_GATHERING_NODE: return gatheringNode.conditionID1;
+        default: return 0;
         }
     }
 
@@ -1054,6 +1095,18 @@ struct GameObjectTemplate
         }
     }
 
+    uint32 GetServerOnly() const
+    {
+        switch (type)
+        {
+            case GAMEOBJECT_TYPE_GENERIC: return generic.serverOnly;
+            case GAMEOBJECT_TYPE_TRAP: return trap.serverOnly;
+            case GAMEOBJECT_TYPE_SPELL_FOCUS: return spellFocus.serverOnly;
+            case GAMEOBJECT_TYPE_AURA_GENERATOR: return auraGenerator.serverOnly;
+            default: return 0;
+        }
+    }
+
     uint32 GetSpellFocusType() const
     {
         switch (type)
@@ -1071,6 +1124,19 @@ struct GameObjectTemplate
             case GAMEOBJECT_TYPE_SPELL_FOCUS:   return spellFocus.radius;
             case GAMEOBJECT_TYPE_UI_LINK:       return UILink.radius;
             default: return 0;
+        }
+    }
+
+    bool IsDisplayMandatory() const
+    {
+        switch (type)
+        {
+            case GAMEOBJECT_TYPE_SPELL_FOCUS:
+            case GAMEOBJECT_TYPE_MULTI:
+            case GAMEOBJECT_TYPE_SIEGEABLE_MULTI:
+                return false;
+            default:
+                return true;
         }
     }
 

@@ -489,10 +489,333 @@ void SetTransportAutoCycleBetweenStopFrames::Execute(GameObjectTypeBase& type) c
     if (Transport* transport = dynamic_cast<Transport*>(&type))
         transport->SetAutoCycleBetweenStopFrames(_on);
 }
+
+class NewFlag : public GameObjectTypeBase
+{
+public:
+    explicit NewFlag(GameObject& owner) : GameObjectTypeBase(owner), _state(FlagState::InBase), _respawnTime(0), _takenFromBaseTime(0) {}
+
+    void SetState(FlagState newState, Player* player)
+    {
+        if (_state == newState)
+            return;
+
+        FlagState oldState = _state;
+        _state = newState;
+
+        if (player && newState == FlagState::Taken)
+            _carrierGUID = player->GetGUID();
+        else
+            _carrierGUID = ObjectGuid::Empty;
+
+        if (newState == FlagState::Taken && oldState == FlagState::InBase)
+            _takenFromBaseTime = GameTime::GetGameTime();
+        else if (newState == FlagState::InBase || newState == FlagState::Respawning)
+            _takenFromBaseTime = 0;
+
+        _owner.UpdateObjectVisibility();
+
+        if (newState == FlagState::Respawning)
+            _respawnTime = GameTime::GetGameTimeMS() + _owner.GetGOInfo()->newflag.RespawnTime;
+        else
+            _respawnTime = 0;
+
+        if (ZoneScript* zoneScript = _owner.GetZoneScript())
+            zoneScript->OnFlagStateChange(&_owner, oldState, _state, player);
+    }
+
+    void Update([[maybe_unused]] uint32 diff) override
+    {
+        if (_state == FlagState::Respawning && GameTime::GetGameTimeMS() >= _respawnTime)
+            SetState(FlagState::InBase, nullptr);
+    }
+
+    bool IsNeverVisibleFor([[maybe_unused]] WorldObject const* seer, [[maybe_unused]] bool allowServersideObjects) const override
+    {
+        return _state != FlagState::InBase;
+    }
+
+    FlagState GetState() const { return _state; }
+    ObjectGuid const& GetCarrierGUID() const { return _carrierGUID; }
+    time_t GetTakenFromBaseTime() const { return _takenFromBaseTime; }
+
+private:
+    FlagState _state;
+    time_t _respawnTime;
+    ObjectGuid _carrierGUID;
+    time_t _takenFromBaseTime;
+};
+
+SetNewFlagState::SetNewFlagState(FlagState state, Player* player) : _state(state), _player(player)
+{
+}
+
+void SetNewFlagState::Execute(GameObjectTypeBase& type) const
+{
+    if (NewFlag* newFlag = dynamic_cast<NewFlag*>(&type))
+        newFlag->SetState(_state, _player);
+}
+
+class ControlZone : public GameObjectTypeBase
+{
+public:
+    explicit ControlZone(GameObject& owner) : GameObjectTypeBase(owner), _value(static_cast<float>(owner.GetGOInfo()->controlZone.startingValue))
+    {
+        if (owner.GetMap()->Instanceable())
+            _heartbeatRate = 1s;
+        else if (owner.GetGOInfo()->controlZone.FrequentHeartbeat)
+            _heartbeatRate = 2500ms;
+        else
+            _heartbeatRate = 5s;
+
+        _heartbeatTracker.Reset(_heartbeatRate);
+        _previousTeamId = GetControllingTeam();
+        _contestedTriggered = false;
+    }
+
+    void Update(uint32 diff) override
+    {
+        if (_owner.HasFlag(GO_FLAG_NOT_SELECTABLE))
+            return;
+
+        _heartbeatTracker.Update(diff);
+        if (_heartbeatTracker.Passed())
+        {
+            _heartbeatTracker.Reset(_heartbeatRate);
+            HandleHeartbeat();
+        }
+    }
+
+    TeamId GetControllingTeam() const
+    {
+        if (_value < GetMaxHordeValue())
+            return TEAM_HORDE;
+
+        if (_value > GetMinAllianceValue())
+            return TEAM_ALLIANCE;
+
+        return TEAM_NEUTRAL;
+    }
+
+    GuidUnorderedSet const* GetInsidePlayers() const { return &_insidePlayers; }
+
+    void ActivateObject(GameObjectActions action, int32 /*param*/, WorldObject* /*spellCaster*/, uint32 /*spellId*/, int32 /*effectIndex*/) override
+    {
+        switch (action)
+        {
+        case GameObjectActions::MakeInert:
+            for (ObjectGuid const& guid : _insidePlayers)
+                if (Player* player = ObjectAccessor::GetPlayer(_owner, guid))
+                    player->SendUpdateWorldState(_owner.GetGOInfo()->controlZone.worldState1, 0);
+
+            _insidePlayers.clear();
+            break;
+        default:
+            break;
+        }
+    }
+
+    void SetValue(float value)
+    {
+        _value = RoundToInterval<float>(value, 0.0f, 100.0f);
+    }
+
+    void HandleHeartbeat()
+    {
+        // update player list inside control zone
+        std::vector<Player*> targetList;
+        SearchTargets(targetList);
+
+        TeamId oldControllingTeam = GetControllingTeam();
+        float pointsGained = CalculatePointsPerSecond(targetList) * _heartbeatRate.count() / 1000.0f;
+        if (pointsGained == 0)
+            return;
+
+        int32 oldRoundedValue = static_cast<int32>(_value);
+        SetValue(_value + pointsGained);
+        int32 roundedValue = static_cast<int32>(_value);
+        if (oldRoundedValue == roundedValue)
+            return;
+
+        TeamId newControllingTeam = GetControllingTeam();
+        TeamId assaultingTeam = pointsGained > 0 ? TEAM_ALLIANCE : TEAM_HORDE;
+
+        if (oldControllingTeam != newControllingTeam)
+            _contestedTriggered = false;
+
+        if (oldControllingTeam != TEAM_ALLIANCE && newControllingTeam == TEAM_ALLIANCE)
+            TriggerEvent(_owner.GetGOInfo()->controlZone.ProgressEventAlliance);
+        else if (oldControllingTeam != TEAM_HORDE && newControllingTeam == TEAM_HORDE)
+            TriggerEvent(_owner.GetGOInfo()->controlZone.ProgressEventHorde);
+        else if (oldControllingTeam == TEAM_HORDE && newControllingTeam == TEAM_NEUTRAL)
+            TriggerEvent(_owner.GetGOInfo()->controlZone.NeutralEventHorde);
+        else if (oldControllingTeam == TEAM_ALLIANCE && newControllingTeam == TEAM_NEUTRAL)
+            TriggerEvent(_owner.GetGOInfo()->controlZone.NeutralEventAlliance);
+
+        if (roundedValue == 100 && newControllingTeam == TEAM_ALLIANCE && assaultingTeam == TEAM_ALLIANCE)
+            TriggerEvent(_owner.GetGOInfo()->controlZone.CaptureEventAlliance);
+        else if (roundedValue == 0 && newControllingTeam == TEAM_HORDE && assaultingTeam == TEAM_HORDE)
+            TriggerEvent(_owner.GetGOInfo()->controlZone.CaptureEventHorde);
+
+        if (oldRoundedValue == 100 && assaultingTeam == TEAM_HORDE && !_contestedTriggered)
+        {
+            TriggerEvent(_owner.GetGOInfo()->controlZone.ContestedEventHorde);
+            _contestedTriggered = true;
+        }
+        else if (oldRoundedValue == 0 && assaultingTeam == TEAM_ALLIANCE && !_contestedTriggered)
+        {
+            TriggerEvent(_owner.GetGOInfo()->controlZone.ContestedEventAlliance);
+            _contestedTriggered = true;
+        }
+
+        for (Player* player : targetList)
+            player->SendUpdateWorldState(_owner.GetGOInfo()->controlZone.worldstate2, roundedValue);
+    }
+
+    void SearchTargets(std::vector<Player*>& targetList)
+    {
+        Trinity::AnyUnitInObjectRangeCheck check(&_owner, _owner.GetGOInfo()->controlZone.radius, true);
+        Trinity::PlayerListSearcher<Trinity::AnyUnitInObjectRangeCheck> searcher(&_owner, targetList, check);
+        Cell::VisitWorldObjects(&_owner, searcher, _owner.GetGOInfo()->controlZone.radius);
+        HandleUnitEnterExit(targetList);
+    }
+
+    float CalculatePointsPerSecond(std::vector<Player*> const& targetList) const
+    {
+        int32 hordePlayers = 0;
+        int32 alliancePlayers = 0;
+
+        for (Player const* player : targetList)
+        {
+            if (!player->IsOutdoorPvPActive())
+                continue;
+
+            if (player->GetTeamId() == TEAM_HORDE)
+                hordePlayers++;
+            else
+                alliancePlayers++;
+        }
+
+        int8 factionCoefficient = 0; // alliance superiority = 1; horde superiority = -1
+
+        if (alliancePlayers > hordePlayers)
+            factionCoefficient = 1;
+        else if (hordePlayers > alliancePlayers)
+            factionCoefficient = -1;
+
+        float const timeNeeded = CalculateTimeNeeded(hordePlayers, alliancePlayers);
+        if (timeNeeded == 0.0f)
+            return 0.0f;
+
+        return 100.0f / timeNeeded * static_cast<float>(factionCoefficient);
+    }
+
+    float CalculateTimeNeeded(int32 hordePlayers, int32 alliancePlayers) const
+    {
+        uint32 const uncontestedTime = _owner.GetGOInfo()->controlZone.UncontestedTime;
+        uint32 const delta = std::abs(alliancePlayers - hordePlayers);
+        uint32 const minSuperiority = _owner.GetGOInfo()->controlZone.minSuperiority;
+
+        if (delta < minSuperiority)
+            return 0.0f;
+
+        // return the uncontested time if controlzone is not contested
+        if (uncontestedTime && (hordePlayers == 0 || alliancePlayers == 0))
+            return static_cast<float>(uncontestedTime);
+
+        uint32 const minTime = _owner.GetGOInfo()->controlZone.minTime;
+        uint32 const maxTime = _owner.GetGOInfo()->controlZone.maxTime;
+        uint32 const maxSuperiority = _owner.GetGOInfo()->controlZone.maxSuperiority;
+
+        float const slope = static_cast<float>(minTime - maxTime) / static_cast<float>(std::max<uint32>(maxSuperiority - minSuperiority, 1));
+        float const intercept = static_cast<float>(maxTime) - slope * static_cast<float>(minSuperiority);
+        return slope * static_cast<float>(delta) + intercept;
+    }
+
+    void HandleUnitEnterExit(std::vector<Player*> const& newTargetList)
+    {
+        GuidUnorderedSet exitPlayers(std::move(_insidePlayers));
+
+        std::vector<Player*> enteringPlayers;
+
+        for (Player* unit : newTargetList)
+        {
+            if (exitPlayers.erase(unit->GetGUID()) == 0) // erase(key_type) returns number of elements erased
+                enteringPlayers.push_back(unit);
+
+            _insidePlayers.insert(unit->GetGUID());
+        }
+
+        for (Player* player : enteringPlayers)
+        {
+            player->SendUpdateWorldState(_owner.GetGOInfo()->controlZone.worldState1, 1);
+            player->SendUpdateWorldState(_owner.GetGOInfo()->controlZone.worldstate2, static_cast<int32>(_value));
+            player->SendUpdateWorldState(_owner.GetGOInfo()->controlZone.worldstate3, _owner.GetGOInfo()->controlZone.neutralPercent);
+        }
+
+        for (ObjectGuid const& exitPlayerGuid : exitPlayers)
+        {
+            if (Player* player = ObjectAccessor::GetPlayer(_owner, exitPlayerGuid))
+            {
+                player->SendUpdateWorldState(_owner.GetGOInfo()->controlZone.worldState1, 0);
+            }
+        }
+    }
+
+    float GetMaxHordeValue() const
+    {
+        // ex: if neutralPercent is 40; then 0 - 30 is Horde Controlled
+        return 50.0f - _owner.GetGOInfo()->controlZone.neutralPercent / 2.0f;
+    }
+
+    float GetMinAllianceValue() const
+    {
+        // ex: if neutralPercent is 40; then 70 - 100 is Alliance Controlled
+        return 50.0f + _owner.GetGOInfo()->controlZone.neutralPercent / 2.0f;
+    }
+
+    void TriggerEvent(uint32 eventId) const
+    {
+        if (eventId <= 0)
+            return;
+
+        _owner.GetMap()->UpdateSpawnGroupConditions();
+        GameEvents::Trigger(eventId, &_owner, nullptr);
+    }
+
+    uint32 GetStartingValue() const
+    {
+        return _owner.GetGOInfo()->controlZone.startingValue;
+    }
+
+private:
+    Milliseconds _heartbeatRate;
+    TimeTracker _heartbeatTracker;
+    GuidUnorderedSet _insidePlayers;
+    TeamId _previousTeamId;
+    float _value;
+    bool _contestedTriggered;
+};
+
+SetControlZoneValue::SetControlZoneValue(Optional<uint32> value /*= { }*/) : _value(value)
+{
+}
+
+void SetControlZoneValue::Execute(GameObjectTypeBase& type) const
+{
+    if (ControlZone* controlZone = dynamic_cast<ControlZone*>(&type))
+    {
+        uint32 value = controlZone->GetStartingValue();
+        if (_value.has_value())
+            value = *_value;
+
+        controlZone->SetValue(value);
+    }
+}
 }
 
 GameObject::GameObject() : WorldObject(false), MapObject(),
-    m_model(nullptr), m_goValue(), m_AI(nullptr), m_respawnCompatibilityMode(false), _animKitId(0), _worldEffectID(0)
+    m_model(nullptr), m_goValue(), m_stringIds(), m_AI(nullptr), m_respawnCompatibilityMode(false), _animKitId(0), _worldEffectID(0)
 {
     m_objectType |= TYPEMASK_GAMEOBJECT;
     m_objectTypeId = TYPEID_GAMEOBJECT;
@@ -828,6 +1151,9 @@ bool GameObject::Create(uint32 entry, Map* map, Position const& pos, QuaternionD
     }
 
     LastUsedScriptID = GetGOInfo()->ScriptId;
+
+    m_stringIds[AsUnderlyingType(StringIdType::Template)] = &goInfo->StringId;
+
     AIM_Initialize();
 
     if (spawnid)
@@ -1224,12 +1550,6 @@ void GameObject::Update(uint32 diff)
                             SetLootState(GO_JUST_DEACTIVATED);
                         else if (!goInfo->trap.charges)
                             SetLootState(GO_READY);
-
-                        // Battleground gameobjects have data2 == 0 && data5 == 3
-                        if (!goInfo->trap.radius && goInfo->trap.cooldown == 3)
-                            if (Player* player = target->ToPlayer())
-                                if (Battleground* bg = player->GetBattleground())
-                                    bg->HandleTriggerBuff(GetGUID());
                     }
                     break;
                 }
@@ -1617,6 +1937,8 @@ bool GameObject::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap
 
     m_goData = data;
 
+    m_stringIds[AsUnderlyingType(StringIdType::Spawn)] = &data->StringId;
+
     if (addToMap && !GetMap()->AddToMap(this))
         return false;
 
@@ -1756,16 +2078,19 @@ void GameObject::SaveRespawnTime(uint32 forceDelay)
     }
 }
 
-bool GameObject::IsNeverVisibleFor(WorldObject const* seer) const
+bool GameObject::IsNeverVisibleFor(WorldObject const* seer, bool allowServersideObjects) const
 {
     if (WorldObject::IsNeverVisibleFor(seer))
         return true;
 
-    if (GetGoType() == GAMEOBJECT_TYPE_SPELL_FOCUS && GetGOInfo()->spellFocus.serverOnly == 1)
+    if (GetGOInfo()->GetServerOnly() && !allowServersideObjects)
         return true;
 
-    if (!GetDisplayId())
+    if (!GetDisplayId() && GetGOInfo()->IsDisplayMandatory())
         return true;
+
+    if (m_goTypeImpl)
+        return m_goTypeImpl->IsNeverVisibleFor(seer, allowServersideObjects);
 
     return false;
 }
@@ -1796,9 +2121,9 @@ bool GameObject::IsAlwaysVisibleFor(WorldObject const* seer) const
     return false;
 }
 
-bool GameObject::IsInvisibleDueToDespawn() const
+bool GameObject::IsInvisibleDueToDespawn(WorldObject const* seer) const
 {
-    if (WorldObject::IsInvisibleDueToDespawn())
+    if (WorldObject::IsInvisibleDueToDespawn(seer))
         return true;
 
     // Despawned
@@ -1877,10 +2202,11 @@ bool GameObject::ActivateToQuest(Player const* target) const
                 return false;
 
             // scan GO chest with loot including quest items
-            if (target->GetQuestStatus(GetGOInfo()->chest.questID) == QUEST_STATUS_INCOMPLETE || LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->GetLootId(), target))
+            if (target->GetQuestStatus(GetGOInfo()->chest.questID) == QUEST_STATUS_INCOMPLETE
+                || LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->chest.chestLoot, target)
+                || LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->chest.chestPersonalLoot, target)
+                || LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->chest.chestPushLoot, target))
             {
-                if (Battleground const* bg = target->GetBattleground())
-                    return bg->CanActivateGO(GetEntry(), bg->GetPlayerTeam(target->GetGUID()));
                 return true;
             }
             break;
@@ -2090,6 +2416,11 @@ void GameObject::ActivateObject(GameObjectActions action, int32 param, WorldObje
             TC_LOG_ERROR("spell", "Spell {} has unhandled action {} in effect {}", spellId, int32(action), effectIndex);
             break;
     }
+
+
+    // Apply side effects of type
+    if (m_goTypeImpl)
+        m_goTypeImpl->ActivateObject(action, param, spellCaster, spellId, effectIndex);
 }
 
 void GameObject::SetGoArtKit(uint32 kit)
@@ -2604,25 +2935,20 @@ void GameObject::Use(Unit* user)
 
             if (player->CanUseBattlegroundObject(this))
             {
-                // in battleground check
-                Battleground* bg = player->GetBattleground();
-                if (!bg)
+                if (player->GetVehicle())
                     return;
 
-                if (player->GetVehicle())
+                if (HasFlag(GO_FLAG_IN_USE))
+                    return;
+
+                if (!MeetsInteractCondition(player))
                     return;
 
                 player->RemoveAurasByType(SPELL_AURA_MOD_STEALTH);
                 player->RemoveAurasByType(SPELL_AURA_MOD_INVISIBILITY);
-                // BG flag click
-                // AB:
-                // 15001
-                // 15002
-                // 15003
-                // 15004
-                // 15005
-                bg->EventPlayerClickedOnFlag(player, this);
-                return;                                     //we don;t need to delete flag ... it is despawned!
+                spellId = GetGOInfo()->flagStand.pickupSpell;
+                spellCaster = nullptr;
+                return;                                     
             }
             break;
         }
@@ -2665,24 +2991,8 @@ void GameObject::Use(Unit* user)
                 // EotS:
                 // 184142 - Netherstorm Flag
                 GameObjectTemplate const* info = GetGOInfo();
-                if (info)
-                {
-                    switch (info->entry)
-                    {
-                        case 179785:                        // Silverwing Flag
-                        case 179786:                        // Warsong Flag
-                            if (bg->GetTypeID(true) == BATTLEGROUND_WS)
-                                bg->EventPlayerClickedOnFlag(player, this);
-                            break;
-                        case 184142:                        // Netherstorm Flag
-                            if (bg->GetTypeID(true) == BATTLEGROUND_EY)
-                                bg->EventPlayerClickedOnFlag(player, this);
-                            break;
-                    }
-
-                    if (info->flagDrop.eventID)
-                        GameEvents::Trigger(info->flagDrop.eventID, player, this);
-                }
+                if (info && info->flagDrop.eventID)
+                    GameEvents::Trigger(info->flagDrop.eventID, player, this);
                 //this cause to call return, all flags must be deleted here!!
                 spellId = 0;
                 Delete();
@@ -2818,6 +3128,34 @@ uint32 GameObject::GetScriptId() const
             return scriptId;
 
     return GetGOInfo()->ScriptId;
+}
+
+void GameObject::InheritStringIds(GameObject const* parent)
+{
+    // copy references to stringIds from template and spawn
+    m_stringIds = parent->m_stringIds;
+
+    // then copy script stringId, not just its reference
+    SetScriptStringId(std::string(parent->GetStringId(StringIdType::Script)));
+}
+
+bool GameObject::HasStringId(std::string_view id) const
+{
+    return std::ranges::any_of(m_stringIds, [id](std::string const* stringId) { return stringId && *stringId == id; });
+}
+
+void GameObject::SetScriptStringId(std::string id)
+{
+    if (!id.empty())
+    {
+        m_scriptStringId.emplace(std::move(id));
+        m_stringIds[AsUnderlyingType(StringIdType::Script)] = &*m_scriptStringId;
+    }
+    else
+    {
+        m_scriptStringId.reset();
+        m_stringIds[AsUnderlyingType(StringIdType::Script)] = nullptr;
+    }
 }
 
 // overwrite WorldObject function for proper name localization
@@ -2986,10 +3324,6 @@ void GameObject::SetDestructibleState(GameObjectDestructibleState state, WorldOb
             if (GetGOInfo()->destructibleBuilding.DestroyedEvent)
                 GameEvents::Trigger(GetGOInfo()->destructibleBuilding.DestroyedEvent, attackerOrHealer, this);
             AI()->Destroyed(attackerOrHealer, m_goInfo->destructibleBuilding.DestroyedEvent);
-
-            if (Player* player = attackerOrHealer ? attackerOrHealer->GetCharmerOrOwnerPlayerOrPlayerItself() : nullptr)
-                if (Battleground* bg = player->GetBattleground())
-                    bg->DestroyGate(player, this);
 
             RemoveFlag(GO_FLAG_DAMAGED);
             SetFlag(GO_FLAG_DESTROYED);
@@ -3763,6 +4097,48 @@ bool GameObject::CanInteractWithCapturePoint(Player const* target) const
     return m_goValue.CapturePoint.State == WorldPackets::Battleground::BattlegroundCapturePointState::ContestedHorde
         || m_goValue.CapturePoint.State == WorldPackets::Battleground::BattlegroundCapturePointState::HordeCaptured;
 }
+
+FlagState GameObject::GetFlagState() const
+{
+    if (GetGoType() != GAMEOBJECT_TYPE_NEW_FLAG)
+        return FlagState(0);
+
+    GameObjectType::NewFlag const* newFlag = dynamic_cast<GameObjectType::NewFlag const*>(m_goTypeImpl.get());
+    if (!newFlag)
+        return FlagState(0);
+
+    return newFlag->GetState();
+}
+
+ObjectGuid const& GameObject::GetFlagCarrierGUID() const
+{
+    if (GetGoType() != GAMEOBJECT_TYPE_NEW_FLAG)
+        return ObjectGuid::Empty;
+
+    GameObjectType::NewFlag const* newFlag = dynamic_cast<GameObjectType::NewFlag const*>(m_goTypeImpl.get());
+    if (!newFlag)
+        return ObjectGuid::Empty;
+
+    return newFlag->GetCarrierGUID();
+}
+
+time_t GameObject::GetFlagTakenFromBaseTime() const
+{
+    if (GetGoType() != GAMEOBJECT_TYPE_NEW_FLAG)
+        return time_t(0);
+
+    GameObjectType::NewFlag const* newFlag = dynamic_cast<GameObjectType::NewFlag const*>(m_goTypeImpl.get());
+    if (!newFlag)
+        return time_t(0);
+
+    return newFlag->GetTakenFromBaseTime();
+}
+
+bool GameObject::MeetsInteractCondition(Player const* user) const
+{
+    return ConditionMgr::IsPlayerMeetingCondition(user, m_goInfo->GetConditionID1());
+}
+
 
 class GameObjectModelOwnerImpl : public GameObjectModelOwnerBase
 {

@@ -27,8 +27,21 @@ class ByteBuffer;
 
 struct TC_GAME_API Position
 {
-    Position(float x = 0, float y = 0, float z = 0, float o = 0)
-        : m_positionX(x), m_positionY(y), m_positionZ(z), m_orientation(NormalizeOrientation(o)) { }
+	constexpr Position()
+		: m_positionX(0.0f), m_positionY(0.0f), m_positionZ(0.0f), m_orientation(0.0f) {
+	}
+
+	constexpr Position(float x, float y)
+		: m_positionX(x), m_positionY(y), m_positionZ(0.0f), m_orientation(0.0f) {
+	}
+
+	constexpr Position(float x, float y, float z)
+		: m_positionX(x), m_positionY(y), m_positionZ(z), m_orientation(0.0f) {
+	}
+
+	constexpr Position(float x, float y, float z, float o)
+		: m_positionX(x), m_positionY(y), m_positionZ(z), m_orientation(NormalizeOrientationConstexprWrapper(o)) {
+	}
 
     // streamer tags
     struct XY;
@@ -159,6 +172,22 @@ public:
 
     // constrain arbitrary radian orientation to interval [0,2*PI)
     static float NormalizeOrientation(float o);
+
+private:
+    static constexpr float NormalizeOrientationConstexprWrapper(float o)
+    {
+        if (std::is_constant_evaluated())
+        {
+            if (o < 0.0f || o >= 2.0f * static_cast<float>(M_PI))
+                throw "Compile time Position initialization requires orientation to be in 0-2pi range";
+
+            return o;
+        }
+        else
+        {
+            return NormalizeOrientation(o);
+        }
+    }
 };
 
 #define MAPID_INVALID 0xFFFFFFFF

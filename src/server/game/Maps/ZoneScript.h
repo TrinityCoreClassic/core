@@ -21,11 +21,15 @@
 #include "Define.h"
 #include "ObjectGuid.h"
 
+class AreaTrigger;
 class Creature;
 class GameObject;
+class Player;
 class Unit;
 class WorldObject;
 struct CreatureData;
+
+enum class FlagState : uint8;
 
 enum class EncounterType : uint8
 {
@@ -34,16 +38,36 @@ enum class EncounterType : uint8
     MythicPlusRun
 };
 
+class TC_GAME_API ControlZoneHandler
+{
+public:
+    explicit ControlZoneHandler();
+    ControlZoneHandler(ControlZoneHandler const& right);
+    ControlZoneHandler(ControlZoneHandler&& right) noexcept;
+    ControlZoneHandler& operator=(ControlZoneHandler const& right);
+    ControlZoneHandler& operator=(ControlZoneHandler&& right) noexcept;
+    virtual ~ControlZoneHandler();
+
+    virtual void HandleCaptureEventHorde([[maybe_unused]] GameObject* controlZone) {}
+    virtual void HandleCaptureEventAlliance([[maybe_unused]] GameObject* controlZone) {}
+    virtual void HandleContestedEventHorde([[maybe_unused]] GameObject* controlZone) {}
+    virtual void HandleContestedEventAlliance([[maybe_unused]] GameObject* controlZone) {}
+    virtual void HandleProgressEventHorde([[maybe_unused]] GameObject* controlZone) {}
+    virtual void HandleProgressEventAlliance([[maybe_unused]] GameObject* controlZone) {}
+    virtual void HandleNeutralEventHorde([[maybe_unused]] GameObject* controlZone) { HandleNeutralEvent(controlZone); }
+    virtual void HandleNeutralEventAlliance([[maybe_unused]] GameObject* controlZone) { HandleNeutralEvent(controlZone); }
+    virtual void HandleNeutralEvent([[maybe_unused]] GameObject* controlZone) {}
+};
+
 class TC_GAME_API ZoneScript
 {
     public:
         ZoneScript();
+        ZoneScript(ZoneScript const& right);
+        ZoneScript(ZoneScript&& right) noexcept;
+        ZoneScript& operator=(ZoneScript const& right);
+        ZoneScript& operator=(ZoneScript&& right) noexcept;
         virtual ~ZoneScript();
-
-        ZoneScript(ZoneScript const& right) = delete;
-        ZoneScript(ZoneScript&& right) = delete;
-        ZoneScript& operator=(ZoneScript const& right) = delete;
-        ZoneScript& operator=(ZoneScript&& right) = delete;
 
         virtual uint32 GetCreatureEntry(ObjectGuid::LowType /*spawnId*/, CreatureData const* data);
         virtual uint32 GetGameObjectEntry(ObjectGuid::LowType /*spawnId*/, uint32 entry) { return entry; }
@@ -53,6 +77,9 @@ class TC_GAME_API ZoneScript
 
         virtual void OnGameObjectCreate(GameObject* ) { }
         virtual void OnGameObjectRemove(GameObject* ) { }
+
+        virtual void OnAreaTriggerCreate([[maybe_unused]] AreaTrigger* areaTrigger) {}
+        virtual void OnAreaTriggerRemove([[maybe_unused]] AreaTrigger* areaTrigger) {}
 
         virtual void OnUnitDeath(Unit*) { }
 
@@ -70,6 +97,17 @@ class TC_GAME_API ZoneScript
 
         virtual void TriggerGameEvent(uint32 gameEventId, WorldObject* source = nullptr, WorldObject* target = nullptr);
         virtual void ProcessEvent(WorldObject* /*obj*/, uint32 /*eventId*/, WorldObject* /*invoker*/) { }
+        virtual void DoAction([[maybe_unused]] uint32 actionId, [[maybe_unused]] WorldObject* source = nullptr, [[maybe_unused]] WorldObject* target = nullptr) {}
+
+        virtual void OnFlagStateChange([[maybe_unused]] GameObject* flagInBase, [[maybe_unused]] FlagState oldValue, [[maybe_unused]] FlagState newValue, [[maybe_unused]] Player* player) {}
+
+        virtual bool CanCaptureFlag([[maybe_unused]] AreaTrigger* areaTrigger, [[maybe_unused]] Player* player) { return false; }
+        virtual void OnCaptureFlag([[maybe_unused]] AreaTrigger* areaTrigger, [[maybe_unused]] Player* player) {}
+
+        // This hook is used with GAMEOBJECT_TYPE_FLAGSTAND. Newer gameobjects use GAMEOBJECT_TYPE_NEW_FLAG and should use `OnFlagStateChange`
+        virtual void OnFlagTaken([[maybe_unused]] GameObject* flag, [[maybe_unused]] Player* player) {}
+        // This hook is used with GAMEOBJECT_TYPE_FLAGSTAND. Newer gameobjects use GAMEOBJECT_TYPE_NEW_FLAG and should use `OnFlagStateChange`. The GameObject doesn't exist anymore, but the ObjectGuid does
+        virtual void OnFlagDropped([[maybe_unused]] ObjectGuid const& flagGuid, [[maybe_unused]] Player* player) {}
 };
 
 #endif

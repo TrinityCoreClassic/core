@@ -18,6 +18,7 @@
 #include "Map.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "BattlegroundScript.h"
 #include "CellImpl.h"
 #include "CharacterPackets.h"
 #include "Conversation.h"
@@ -3361,21 +3362,20 @@ void BattlegroundMap::InitScriptData()
 
     ASSERT(GetBG(), "Battleground not set yet!");
 
-    //TODOFROST
-    //if (BattlegroundScriptTemplate const* scriptTemplate = sBattlegroundMgr->FindBattlegroundScriptTemplate(GetId(), GetBG()->GetTypeID()))
-    //{
-    //    _scriptId = scriptTemplate->ScriptId;
-    //    _battlegroundScript.reset(sScriptMgr->CreateBattlegroundData(this));
-    //}
+    if (BattlegroundScriptTemplate const* scriptTemplate = sBattlegroundMgr->FindBattlegroundScriptTemplate(GetId(), GetBG()->GetTypeID()))
+    {
+        _scriptId = scriptTemplate->ScriptId;
+        _battlegroundScript.reset(sScriptMgr->CreateBattlegroundData(this));
+    }
 
-    //// Make sure every battleground has a default script
-    //if (!_battlegroundScript)
-    //{
-    //    if (IsBattleArena())
-    //        _battlegroundScript = std::make_unique<ArenaScript>(this);
-    //    else
-    //        _battlegroundScript = std::make_unique<BattlegroundScript>(this);
-    //}
+    // Make sure every battleground has a default script
+    if (!_battlegroundScript)
+    {
+        if (IsBattleArena())
+            _battlegroundScript = std::make_unique<ArenaScript>(this);
+        else
+            _battlegroundScript = std::make_unique<BattlegroundScript>(this);
+    }
 }
 
 TransferAbortParams BattlegroundMap::CannotEnter(Player* player)
@@ -3424,7 +3424,7 @@ void BattlegroundMap::RemoveAllPlayers()
 void BattlegroundMap::Update(uint32 diff)
 {
     Map::Update(diff);
-    //_battlegroundScript->OnUpdate(diff); //TODOFROST
+    _battlegroundScript->OnUpdate(diff);
 }
 
 AreaTrigger* Map::GetAreaTrigger(ObjectGuid const& guid)

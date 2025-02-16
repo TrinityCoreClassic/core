@@ -182,7 +182,9 @@ enum ConditionSourceType
     CONDITION_SOURCE_TYPE_TRAINER_SPELL                  = 31,
     CONDITION_SOURCE_TYPE_OBJECT_ID_VISIBILITY           = 32,
     CONDITION_SOURCE_TYPE_SPAWN_GROUP                    = 33,
-    CONDITION_SOURCE_TYPE_MAX                            = 34  // MAX
+    CONDITION_SOURCE_TYPE_PLAYER_CONDITION               = 34,
+
+    CONDITION_SOURCE_TYPE_MAX                            = 35  // MAX
 };
 
 enum RelationType
@@ -307,6 +309,7 @@ class TC_GAME_API ConditionMgr
         bool IsObjectMeetingVisibilityByObjectIdConditions(uint32 objectType, uint32 entry, WorldObject* seer) const;
 
         static uint32 GetPlayerConditionLfgValue(Player const* player, PlayerConditionLfgStatus status);
+        static bool IsPlayerMeetingCondition(Player const* player, uint32 conditionId);
         static bool IsPlayerMeetingCondition(Player const* player, PlayerConditionEntry const* condition);
         static bool IsPlayerMeetingExpression(Player const* player, WorldStateExpressionEntry const* expression);
         static bool IsUnitMeetingCondition(Unit const* unit, Unit const* otherUnit, UnitConditionEntry const* condition);

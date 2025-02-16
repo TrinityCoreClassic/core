@@ -24,7 +24,7 @@ namespace Trinity::Impl::EnumUtilsImpl
 {
 
 /******************************************************************\
-|* data for enum 'ArenaTeamTypes' in 'ArenaTeam.h' auto-generated *|
+ |* data for enum 'ArenaTeamTypes' in 'ArenaTeam.h' auto-generated *|
 \******************************************************************/
 template <>
 TC_API_EXPORT EnumText EnumUtils<ArenaTeamTypes>::ToString(ArenaTeamTypes value)

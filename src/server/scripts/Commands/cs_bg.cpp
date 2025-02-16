@@ -75,7 +75,7 @@ public:
             return false;
         }
 
-        bg->EndBattleground(0);
+        bg->EndBattleground(TEAM_OTHER);
 
         return true;
     }

@@ -66,8 +66,5 @@ void GameEvents::TriggerForPlayer(uint32 gameEventId, Player* source)
 
 void GameEvents::TriggerForMap(uint32 gameEventId, Map* map, WorldObject* source, WorldObject* target)
 {
-    if (BattlegroundMap* bgMap = map->ToBattlegroundMap())
-        bgMap->GetBG()->ProcessEvent(target, gameEventId, source);
-
     map->ScriptsStart(sEventScripts, gameEventId, source, target);
 }
