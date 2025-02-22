@@ -1340,7 +1340,7 @@ DROP TABLE IF EXISTS `game_event_creature`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `game_event_creature` (
-  `eventEntry` tinyint NOT NULL COMMENT 'Entry of the game event. Put negative entry to remove during event.',
+  `eventEntry` smallint NOT NULL COMMENT 'Entry of the game event. Put negative entry to remove during event.',
   `guid` bigint unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`guid`,`eventEntry`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1369,7 +1369,7 @@ DROP TABLE IF EXISTS `game_event_gameobject`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `game_event_gameobject` (
-  `eventEntry` tinyint NOT NULL COMMENT 'Entry of the game event. Put negative entry to remove during event.',
+  `eventEntry` smallint NOT NULL COMMENT 'Entry of the game event. Put negative entry to remove during event.',
   `guid` bigint unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`guid`,`eventEntry`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

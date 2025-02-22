@@ -2251,7 +2251,7 @@ void ObjectMgr::LoadCreatures()
         data.curmana        = fields[13].GetUInt32();
         data.movementType   = fields[14].GetUInt8();
         data.spawnDifficulties = ParseSpawnDifficulties(fields[15].GetString(), "creature", guid, data.mapId, spawnMasks[data.mapId]);
-        int16 gameEvent     = fields[16].GetInt8();
+        int16 gameEvent     = fields[16].GetInt16();
         data.poolId         = fields[17].GetUInt32();
         data.npcflag        = fields[18].GetUInt64();
         data.unit_flags     = fields[19].GetUInt32();
@@ -2643,7 +2643,7 @@ void ObjectMgr::LoadGameObjects()
             continue;
         }
 
-        int16 gameEvent     = fields[15].GetInt8();
+        int16 gameEvent     = fields[15].GetInt16();
         data.poolId         = fields[16].GetUInt32();
         data.phaseUseFlags  = fields[17].GetUInt8();
         data.phaseId        = fields[18].GetUInt32();
