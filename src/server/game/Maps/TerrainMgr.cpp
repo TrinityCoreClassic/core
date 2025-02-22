@@ -378,7 +378,14 @@ void TerrainInfo::GetFullTerrainStatusForPosition(PhaseShift const& phaseShift, 
             if (!wmoEntry)
                 wmoEntry = sDB2Manager.GetWMOAreaTable(wmoData->areaInfo->rootId, wmoData->areaInfo->adtId, -1);
 
-            data.outdoors = (wmoData->areaInfo->mogpFlags & 0x8) != 0;
+            // trinity previously used 'exterior' to determine if outdoors
+            // however vmangos uses 'allow_mount',
+            // not that the values arent always the same, using vmangos as a more accurate reference for classic.
+            const bool exterior = (wmoData->areaInfo->mogpFlags & 0x8) != 0;
+            const bool interior = (wmoData->areaInfo->mogpFlags & 0x2000) != 0;
+            const bool allow_mount = (wmoData->areaInfo->mogpFlags & 0x8000) != 0;
+
+            data.outdoors = allow_mount;
             if (wmoEntry)
             {
                 data.areaId = wmoEntry->AreaTableID;
