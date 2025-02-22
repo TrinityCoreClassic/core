@@ -163,30 +163,6 @@ enum GroupUpdatePetFlags
                             GROUP_UPDATE_FLAG_PET_CUR_HP | GROUP_UPDATE_FLAG_PET_MAX_HP | GROUP_UPDATE_FLAG_PET_AURAS // all pet flags
 };
 
-class Roll
-{
-    public:
-        explicit Roll(LootItem const& li);
-        ~Roll();
-        void setLoot(Loot* pLoot);
-        Loot* getLoot();
-        void FillPacket(WorldPackets::Loot::LootItemData& lootItem) const;
-        ItemDisenchantLootEntry const* GetItemDisenchantLoot(Player const* player) const;
-
-        uint32 itemid;
-        ItemRandomEnchantmentId itemRandomPropId;
-        uint32 itemRandomSuffix;
-        uint8 itemCount;
-        typedef std::map<ObjectGuid, RollVote> PlayerVote;
-        PlayerVote playerVote;                              //vote position correspond with player position (in group)
-        uint8 totalPlayersRolling;
-        uint8 totalNeed;
-        uint8 totalGreed;
-        uint8 totalPass;
-        uint8 itemSlot;
-        uint8 rollVoteMask;
-};
-
 struct RaidMarker
 {
     WorldLocation Location;
@@ -268,8 +244,6 @@ class TC_GAME_API Group
     protected:
         typedef MemberSlotList::iterator member_witerator;
         typedef std::set<Player*> InvitesList;
-
-        typedef std::vector<Roll*> Rolls;
 
     public:
         Group();
@@ -413,28 +387,6 @@ class TC_GAME_API Group
         void BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignoredPlayer = ObjectGuid::Empty) const;
         void BroadcastAddonMessagePacket(WorldPacket const* packet, const std::string& prefix, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignore = ObjectGuid::Empty) const;
 
-        /*********************************************************/
-        /***                   LOOT SYSTEM                     ***/
-        /*********************************************************/
-
-        bool isRollLootActive() const { return !RollId.empty(); }
-        void SendLootStartRollToPlayer(uint32 countDown, uint32 mapId, Player* p, bool canNeed, Roll const& r) const;
-        void SendLootRoll(ObjectGuid playerGuid, int32 rollNumber, uint8 rollType, Roll const& roll, bool autoPass = false) const;
-        void SendLootRollWon(ObjectGuid winnerGuid, int32 rollNumber, uint8 rollType, Roll const& roll) const;
-        void SendLootAllPassed(Roll const& roll) const;
-        void SendLootRollsComplete(Roll const& roll) const;
-        void SendLooter(Creature* creature, Player* pLooter);
-        void GroupLoot(Loot* loot, WorldObject* pLootedObject);
-        void NeedBeforeGreed(Loot* loot, WorldObject* pLootedObject);
-        void MasterLoot(Loot* loot, WorldObject* pLootedObject);
-        Rolls::iterator GetRoll(ObjectGuid lootObjectGuid, uint8 lootListId);
-        void CountTheRoll(Rolls::iterator roll, Map* allowedMap);
-        void CountRollVote(ObjectGuid playerGuid, ObjectGuid lootObjectGuid, uint8 lootListId, uint8 choice);
-        void EndRoll(Loot* loot, Map* allowedMap);
-
-        // related to disenchant rolls
-        void ResetMaxEnchantingLevel();
-
         void LinkMember(GroupReference* pRef);
         void DelinkMember(ObjectGuid guid);
 
@@ -496,7 +448,6 @@ class TC_GAME_API Group
         ItemQualities       m_lootThreshold;
         ObjectGuid          m_looterGuid;
         ObjectGuid          m_masterLooterGuid;
-        Rolls               RollId;
         std::unordered_map<uint32 /*mapId*/, std::pair<ObjectGuid /*instanceOwner*/, uint32 /*instanceId*/>> m_recentInstances;
         GroupInstanceRefManager m_ownedInstancesMgr;
         uint8*              m_subGroupsCounts;

@@ -402,21 +402,11 @@ void WorldSession::HandleSetLootMethodOpcode(WorldPackets::Party::SetLootMethod&
 
 void WorldSession::HandleLootRoll(WorldPackets::Loot::LootRoll& packet)
 {
-    Group* group = GetPlayer()->GetGroup();
-    if (!group)
+    LootRoll* lootRoll = GetPlayer()->GetLootRoll(packet.LootObj, packet.LootListID);
+    if (!lootRoll)
         return;
 
-    group->CountRollVote(GetPlayer()->GetGUID(), packet.LootObj, packet.LootListID - 1, packet.RollType);
-
-    switch (packet.RollType)
-    {
-        case ROLL_NEED:
-            GetPlayer()->UpdateCriteria(CriteriaType::RollAnyNeed, 1);
-            break;
-        case ROLL_GREED:
-            GetPlayer()->UpdateCriteria(CriteriaType::RollAnyGreed, 1);
-            break;
-    }
+    lootRoll->PlayerVote(GetPlayer(), RollVote(packet.RollType));
 }
 
 void WorldSession::HandleMinimapPingOpcode(WorldPackets::Party::MinimapPingClient& packet)

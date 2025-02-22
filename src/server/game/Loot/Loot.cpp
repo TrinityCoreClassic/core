@@ -505,17 +505,14 @@ Optional<uint32> LootRoll::GetItemDisenchantLootId() const
 
     ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(m_lootItem->itemid);
 
-    //TODOFROST
-    //// ignore temporary item level scaling (pvp or timewalking)
-    //uint32 itemLevel = Item::GetItemLevel(itemTemplate, bonusData, bonusData.RequiredLevel, 0, 0, 0, 0, false, 0);
+    // ignore temporary item level scaling (pvp or timewalking)
+    uint32 itemLevel = Item::GetItemLevel(itemTemplate, bonusData, bonusData.RequiredLevel, 0, 0, 0, 0, false);
 
-    //ItemDisenchantLootEntry const* disenchantLoot = Item::GetBaseDisenchantLoot(itemTemplate, bonusData.Quality, itemLevel);
-    //if (!disenchantLoot)
-    //    return {};
+    ItemDisenchantLootEntry const* disenchantLoot = Item::GetDisenchantLoot(itemTemplate, bonusData.Quality, itemLevel);
+    if (!disenchantLoot)
+        return {};
 
-    //return disenchantLoot->ID;
-
-    return {};
+    return disenchantLoot->ID;
 }
 
 Optional<uint16> LootRoll::GetItemDisenchantSkillRequired() const
@@ -530,17 +527,14 @@ Optional<uint16> LootRoll::GetItemDisenchantSkillRequired() const
 
     ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(m_lootItem->itemid);
 
-    //TODOFROST
-    //// ignore temporary item level scaling (pvp or timewalking)
-    //uint32 itemLevel = Item::GetItemLevel(itemTemplate, bonusData, bonusData.RequiredLevel, 0, 0, 0, 0, false, 0);
+    // ignore temporary item level scaling (pvp or timewalking)
+    uint32 itemLevel = Item::GetItemLevel(itemTemplate, bonusData, bonusData.RequiredLevel, 0, 0, 0, 0, false);
 
-    //ItemDisenchantLootEntry const* disenchantLoot = Item::GetBaseDisenchantLoot(itemTemplate, bonusData.Quality, itemLevel);
-    //if (!disenchantLoot)
-    //    return {};
+    ItemDisenchantLootEntry const* disenchantLoot = Item::GetDisenchantLoot(itemTemplate, bonusData.Quality, itemLevel);
+    if (!disenchantLoot)
+        return {};
 
-    //return disenchantLoot->SkillRequired;
-
-    return {};
+    return disenchantLoot->SkillRequired;
 }
 
 // terminate the roll
@@ -566,23 +560,16 @@ void LootRoll::Finish(RollVoteMap::const_iterator winnerItr)
             else
                 player->UpdateCriteria(CriteriaType::RollGreed, m_lootItem->itemid, winnerItr->second.RollNumber);
 
-            //TODOFROST
-            //if (winnerItr->second.Vote == RollVote::Disenchant)
-            //{
-            //    Loot loot(m_map, m_loot->GetOwnerGUID(), LOOT_DISENCHANTING, nullptr);
-            //    loot.FillLoot(*GetItemDisenchantLootId(), LootTemplates_Disenchant, player, true, false, LOOT_MODE_DEFAULT, ItemContext::NONE);
-            //    if (!loot.AutoStore(player, NULL_BAG, NULL_SLOT, true))
-            //    {
-            //        for (uint32 i = 0; i < loot.items.size(); ++i)
-            //            if (LootItem* disenchantLoot = loot.LootItemInSlot(i, player))
-            //                if (disenchantLoot->type == LootItemType::Item)
-            //                    player->SendItemRetrievalMail(disenchantLoot->itemid, disenchantLoot->count, disenchantLoot->context);
-            //    }
-            //    else
-            //        m_loot->NotifyItemRemoved(m_lootItem->LootListId, m_map);
-            //}
-            //else
-            //    player->StoreLootItem(m_loot->GetOwnerGUID(), m_lootItem->LootListId, m_loot);
+            const uint32 loot_list_id = 0;
+            if (winnerItr->second.Vote == RollVote::Disenchant)
+            {
+                Loot loot(m_map, m_loot->GetOwnerGUID(), LOOT_DISENCHANTING, nullptr);
+                loot.FillLoot(*GetItemDisenchantLootId(), LootTemplates_Disenchant, player, true, false, LOOT_MODE_DEFAULT, ItemContext::NONE);
+                if (loot.AutoStore(player, NULL_BAG, NULL_SLOT, true))
+                    m_loot->NotifyItemRemoved(loot_list_id, m_map);
+            }
+            else
+                player->StoreLootItem(m_loot->GetOwnerGUID(), loot_list_id, m_loot);
         }
     }
     m_isStarted = false;
@@ -592,15 +579,36 @@ void LootRoll::Finish(RollVoteMap::const_iterator winnerItr)
 // --------- Loot ---------
 //
 
-Loot::Loot(Map* map, ObjectGuid owner, LootType type) : gold(0), unlootedCount(0), roundRobinPlayer(), loot_type(type), maxDuplicates(1),
+Loot::Loot(Map* map, ObjectGuid owner, LootType type, Group const* group) : gold(0), unlootedCount(0), roundRobinPlayer(), loot_type(type), maxDuplicates(1),
     _guid(map ? ObjectGuid::Create<HighGuid::LootObject>(map->GetId(), 0, map->GenerateLowGuid<HighGuid::LootObject>()) : ObjectGuid::Empty),
-    _owner(owner), _itemContext(ItemContext::NONE)
+    _owner(owner), _itemContext(ItemContext::NONE), _lootMethod(group ? group->GetLootMethod() : FREE_FOR_ALL),
+    _lootMaster(group ? group->GetMasterLooterGuid() : ObjectGuid::Empty), _wasOpened(false), _changed(false)
 {
 }
 
 Loot::~Loot()
 {
     clear();
+}
+
+void Loot::NotifyLootList(Map const* map) const
+{
+    WorldPackets::Loot::LootList lootList;
+
+    lootList.Owner = GetOwnerGUID();
+    lootList.LootObj = GetGUID();
+
+    if (GetLootMethod() == MASTER_LOOT && hasOverThresholdItem())
+        lootList.Master = GetLootMasterGUID();
+
+    if (!roundRobinPlayer.IsEmpty())
+        lootList.RoundRobinWinner = roundRobinPlayer;
+
+    lootList.Write();
+
+    for (ObjectGuid allowedLooterGuid : _allowedLooters)
+        if (Player* allowedLooter = ObjectAccessor::GetPlayer(map, allowedLooterGuid))
+            allowedLooter->SendDirectMessage(lootList.GetRawPacket());
 }
 
 void Loot::clear()
@@ -688,6 +696,59 @@ void Loot::NotifyMoneyRemoved(Map const* map)
         else
             itr = PlayersLooting.erase(itr);
     }
+}
+
+void Loot::OnLootOpened(Map* map, Player* looter)
+{
+    AddLooter(looter->GetGUID());
+
+    if (!_wasOpened)
+    {
+        _wasOpened = true;
+
+        if (_lootMethod == GROUP_LOOT || _lootMethod == NEED_BEFORE_GREED)
+        {
+            uint16 maxEnchantingSkill = 0;
+            for (ObjectGuid allowedLooterGuid : _allowedLooters)
+                if (Player* allowedLooter = ObjectAccessor::GetPlayer(map, allowedLooterGuid))
+                    maxEnchantingSkill = std::max(maxEnchantingSkill, allowedLooter->GetSkillValue(SKILL_ENCHANTING));
+
+            for (uint32 lootListId = 0; lootListId < items.size(); ++lootListId)
+            {
+                LootItem& item = items[lootListId];
+                if (!item.is_blocked)
+                    continue;
+
+                auto&& [itr, inserted] = _rolls.try_emplace(lootListId);
+                if (!itr->second.TryToStart(map, *this, lootListId, maxEnchantingSkill))
+                    _rolls.erase(itr);
+            }
+
+            if (!_rolls.empty())
+                _changed = true;
+        }
+        else if (_lootMethod == MASTER_LOOT)
+        {
+            if (looter->GetGUID() == _lootMaster)
+            {
+                WorldPackets::Loot::MasterLootCandidateList masterLootCandidateList;
+                masterLootCandidateList.LootObj = GetGUID();
+                masterLootCandidateList.Players = _allowedLooters;
+                looter->SendDirectMessage(masterLootCandidateList.Write());
+            }
+        }
+    }
+
+    //TODOFROST - check
+    //// Flag tracking quests as completed after all items were scanned for this player (some might depend on this quest not being completed)
+    //if (!_mailUnlootedItems)
+    //    if (std::vector<NotNormalLootItem>* ffaItems = Trinity::Containers::MapGetValuePtr(PlayerFFAItems, looter->GetGUID()))
+    //        AutoStoreTrackingQuests(looter, *ffaItems);
+}
+
+bool Loot::HasAllowedLooter(ObjectGuid const& looter) const
+{
+    return _allowedLooters.find(looter) != _allowedLooters.end();
 }
 
 void Loot::generateMoneyLoot(uint32 minAmount, uint32 maxAmount)
@@ -801,6 +862,82 @@ void Loot::AddItem(LootStoreItem const& item, Player const* player)
             ++unlootedCount;
     }
 }
+bool Loot::AutoStore(Player* player, uint8 bag, uint8 slot, bool broadcast, bool createdByPlayer)
+{
+    bool allLooted = true;
+    for (uint32 i = 0; i < items.size(); ++i)
+    {
+        NotNormalLootItem* ffaitem = nullptr;
+
+        LootItem* lootItem = LootItemInSlot(i, player, &ffaitem);
+        if (!lootItem || lootItem->is_looted)
+            continue;
+
+        if (!lootItem->HasAllowedLooter(player->GetGUID()))
+            continue;
+
+        if (lootItem->is_blocked)
+            continue;
+
+        // dont allow protected item to be looted by someone else
+        if (!lootItem->rollWinnerGUID.IsEmpty() && lootItem->rollWinnerGUID != GetGUID())
+            continue;
+
+        switch (lootItem->type)
+        {
+        case LootItemType::Item:
+        {
+            ItemPosCountVec dest;
+            InventoryResult msg = player->CanStoreNewItem(bag, slot, dest, lootItem->itemid, lootItem->count);
+            if (msg != EQUIP_ERR_OK && slot != NULL_SLOT)
+                msg = player->CanStoreNewItem(bag, NULL_SLOT, dest, lootItem->itemid, lootItem->count);
+            if (msg != EQUIP_ERR_OK && bag != NULL_BAG)
+                msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, lootItem->itemid, lootItem->count);
+            if (msg != EQUIP_ERR_OK)
+            {
+                player->SendEquipError(msg, nullptr, nullptr, lootItem->itemid);
+                allLooted = false;
+                continue;
+            }
+
+            if (Item* pItem = player->StoreNewItem(dest, lootItem->itemid, true, lootItem->randomPropertyId, GuidSet(), lootItem->context, lootItem->BonusListIDs))
+            {
+                player->SendNewItem(pItem, lootItem->count, false, createdByPlayer, broadcast);
+                player->ApplyItemLootedSpell(pItem, true);
+            }
+
+            break;
+        }
+        case LootItemType::Currency:
+            player->ModifyCurrency(lootItem->itemid, lootItem->count);
+            break;
+        //TODOFROST - check
+        //case LootItemType::TrackingQuest:
+
+        //    if (Quest const* quest = sObjectMgr->GetQuestTemplate(lootItem->itemid))
+        //        player->RewardQuest(quest, LootItemType::Item, 0, player, false);
+        //    break;
+        }
+
+        if (ffaitem)
+            ffaitem->is_looted = true;
+
+        if (!lootItem->freeforall)
+            lootItem->is_looted = true;
+
+        --unlootedCount;
+    }
+
+    return allLooted;
+}
+
+
+
+void Loot::LootMoney()
+{
+    gold = 0;
+    _changed = true;
+}
 
 LootItem const* Loot::GetItemInSlot(uint32 lootSlot) const
 {
@@ -874,6 +1011,7 @@ LootItem* Loot::LootItemInSlot(uint32 lootSlot, Player* player, NotNormalLootIte
     if (is_looted)
         return nullptr;
 
+    _changed = true;
     return item;
 }
 
@@ -1173,9 +1311,21 @@ void Loot::BuildLootResponse(WorldPackets::Loot::LootResponse& packet, Player* v
     }
 }
 
+void Loot::Update()
+{
+    for (auto itr = _rolls.begin(); itr != _rolls.end(); )
+    {
+        if (itr->second.UpdateRoll())
+            itr = _rolls.erase(itr);
+        else
+            ++itr;
+    }
+}
+
 void Loot::FillNotNormalLootFor(Player const* player, bool presentAtLooting)
 {
     ObjectGuid plguid = player->GetGUID();
+    _allowedLooters.insert(plguid);
 
     NotNormalLootItemMap::const_iterator qmapitr = PlayerQuestItems.find(plguid);
     if (qmapitr == PlayerQuestItems.end())

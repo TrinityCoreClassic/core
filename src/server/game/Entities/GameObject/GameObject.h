@@ -266,8 +266,8 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         void DespawnOrUnsummon(Milliseconds delay = 0ms, Seconds forceRespawnTime = 0s);
         void Delete();
         void SendGameObjectDespawn();
-        void getFishLoot(Loot* loot, Player* loot_owner);
-        void getFishLootJunk(Loot* loot, Player* loot_owner);
+        Loot* getFishLoot(Player* lootOwner);
+        Loot* getFishLootJunk(Player* lootOwner);
 
         bool HasFlag(GameObjectFlags flags) const {
             return (*m_gameObjectData->Flags & flags) != 0;
@@ -313,7 +313,7 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
 
         void EnableCollision(bool enable);
 
-        void Use(Unit* user);
+        void Use(Unit* user, bool ignoreCastInProgress = false);
 
         LootState getLootState() const { return m_lootState; }
         // Note: unit is only used when s = GO_ACTIVATED
@@ -325,6 +325,7 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         void AddLootMode(uint16 lootMode) { m_LootMode |= lootMode; }
         void RemoveLootMode(uint16 lootMode) { m_LootMode &= ~lootMode; }
         void ResetLootMode() { m_LootMode = LOOT_MODE_DEFAULT; }
+        void ClearLoot();
         void SetLootGenerationTime();
         uint32 GetLootGenerationTime() const { return m_lootGenerationTime; }
 

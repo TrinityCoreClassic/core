@@ -298,22 +298,29 @@ struct TC_GAME_API Loot
     LootType loot_type;                                     // required for achievement system
     uint8 maxDuplicates;                                    // Max amount of items with the same entry that can drop (default is 1; on 25 man raid mode 3)
 
-    explicit Loot(Map* map, ObjectGuid owner, LootType type);
+    explicit Loot(Map* map, ObjectGuid owner, LootType type, Group const* group);
     ~Loot();
 
     ObjectGuid const& GetGUID() const { return _guid; }
     ObjectGuid const& GetOwnerGUID() const { return _owner; }
+    LootMethod GetLootMethod() const { return _lootMethod; }
+    ObjectGuid const& GetLootMasterGUID() const { return _lootMaster; }
 
     void clear();
 
     bool empty() const { return items.empty() && gold == 0; }
     bool isLooted() const { return gold == 0 && unlootedCount == 0; }
+    bool IsChanged() const { return _changed; }
 
+    void NotifyLootList(Map const* map) const;
     void NotifyItemRemoved(uint8 lootIndex, Map const* map);
     void NotifyQuestItemRemoved(uint8 questIndex, Map const* map);
     void NotifyMoneyRemoved(Map const* map);
+    void OnLootOpened(Map* map, Player* looter);
     void AddLooter(ObjectGuid GUID) { PlayersLooting.insert(GUID); }
     void RemoveLooter(ObjectGuid GUID) { PlayersLooting.erase(GUID); }
+
+    bool HasAllowedLooter(ObjectGuid const& looter) const;
 
     void generateMoneyLoot(uint32 minAmount, uint32 maxAmount);
     bool FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError = false, uint16 lootMode = LOOT_MODE_DEFAULT, ItemContext context = ItemContext::NONE);
@@ -321,6 +328,9 @@ struct TC_GAME_API Loot
     // Inserts the item into the loot (called by LootTemplate processors)
     void AddItem(LootStoreItem const& item, Player const* player);
 
+    bool AutoStore(Player* player, uint8 bag, uint8 slot, bool broadcast = false, bool createdByPlayer = false);
+
+    void LootMoney();
     LootItem const* GetItemInSlot(uint32 lootSlot) const;
     LootItem* LootItemInSlot(uint32 lootslot, Player* player, NotNormalLootItem** qitem = nullptr, NotNormalLootItem** ffaitem = nullptr, NotNormalLootItem** conditem = nullptr);
     uint32 GetMaxSlotInLootFor(Player* player) const;
@@ -330,6 +340,8 @@ struct TC_GAME_API Loot
 
     // Builds data for SMSG_LOOT_RESPONSE
     void BuildLootResponse(WorldPackets::Loot::LootResponse& packet, Player* viewer, PermissionTypes permission = ALL_PERMISSION) const;
+
+    void Update();
 
 private:
 
@@ -347,6 +359,12 @@ private:
     ObjectGuid _guid;
     ObjectGuid _owner;                                              // The WorldObject that holds this loot
     ItemContext _itemContext;
+    LootMethod _lootMethod;
+    std::unordered_map<uint32, LootRoll> _rolls;                    // used if an item is under rolling
+    ObjectGuid _lootMaster;
+    GuidUnorderedSet _allowedLooters;
+    bool _wasOpened;
+    bool _changed;
 };
 
 class TC_GAME_API AELootResult

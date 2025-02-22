@@ -1174,7 +1174,6 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     {
         //pCurrChar->groupInfo.group->SendInit(this); // useless
         group->SendUpdate();
-        group->ResetMaxEnchantingLevel();
         if (group->GetLeaderGUID() == pCurrChar->GetGUID())
             group->StopLeaderOfflineTimer();
     }

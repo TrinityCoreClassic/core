@@ -2112,10 +2112,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         ObjectGuid const& GetLootGUID() const { return m_playerData->LootTargetGUID; }
         void SetLootGUID(ObjectGuid const& guid) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::LootTargetGUID), guid); }
-        ObjectGuid GetLootWorldObjectGUID(ObjectGuid const& lootObjectGuid) const;
+        Loot* GetLootByWorldObjectGUID(ObjectGuid const& lootWorldObjectGuid) const;
         void RemoveAELootedWorldObject(ObjectGuid const& lootWorldObjectGuid);
         bool HasLootWorldObjectGUID(ObjectGuid const& lootWorldObjectGuid) const;
-        std::unordered_map<ObjectGuid, ObjectGuid> const& GetAELootView() const { return m_AELootView; }
+        std::unordered_map<ObjectGuid, Loot*> const& GetAELootView() const { return m_AELootView; }
         LootRoll* GetLootRoll(ObjectGuid const& lootObjectGuid, uint8 lootListId);
         void AddLootRoll(LootRoll* roll) { m_lootRolls.push_back(roll); }
         void RemoveLootRoll(LootRoll* roll);
@@ -2443,7 +2443,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         PlayerMenu* PlayerTalkClass;
         std::vector<ItemSetEffect*> ItemSetEff;
 
-        void SendLoot(ObjectGuid guid, LootType loot_type, bool aeLooting = false);
+        void SendLoot(Loot& loot, bool aeLooting = false);
         void SendLootError(ObjectGuid const& lootObj, ObjectGuid const& owner, LootError error) const;
         void SendLootRelease(ObjectGuid guid) const;
         void SendLootReleaseAll() const;
@@ -3320,7 +3320,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         SceneMgr m_sceneMgr;
 
-        std::unordered_map<ObjectGuid /*LootObject*/, ObjectGuid /*world object*/> m_AELootView;
+        std::unordered_map<ObjectGuid /*LootObject*/, Loot*> m_AELootView;
         std::vector<LootRoll*> m_lootRolls;                                     // loot rolls waiting for answer
 
         void _InitHonorLevelOnLoadFromDB(uint32 honor, uint32 honorLevel);

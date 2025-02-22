@@ -1097,7 +1097,7 @@ class TC_GAME_API WorldSession
         // Guild/Arena Team
         void SendPetitionShowList(ObjectGuid guid);
 
-        void DoLootRelease(ObjectGuid lguid);
+        void DoLootRelease(Loot* loot);
         void DoLootReleaseAll();
 
         // Account mute time

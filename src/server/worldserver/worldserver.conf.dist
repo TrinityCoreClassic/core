@@ -2510,6 +2510,20 @@ Rate.Auction.Deposit = 1
 Rate.Auction.Cut     = 1
 
 #
+#    Rate.Mining.Amount
+#        Description: Mining loot rate.
+#        Default:     1
+
+Rate.Mining.Amount = 1
+
+#
+#    Rate.Mining.Next
+#        Description: Mining loot next chance rate.
+#        Default:     1
+
+Rate.Mining.Next = 1
+
+#
 #    Rate.Honor
 #        Description: Honor gain rate.
 #        Default:     1

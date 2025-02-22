@@ -1287,7 +1287,8 @@ void GameObject::Update(uint32 diff)
                     // If there is no restock timer, or if the restock timer passed, the chest becomes ready to loot
                     m_restockTime = 0;
                     m_lootState = GO_READY;
-                    AddToObjectUpdateIfNeeded();
+                    ClearLoot();
+                    UpdateDynamicFlagsForNearbyPlayers();
                     break;
                 default:
                     m_lootState = GO_READY;                         // for other GOis same switched without delay to GO_READY
@@ -1504,26 +1505,18 @@ void GameObject::Update(uint32 diff)
                     }
                     break;
                 case GAMEOBJECT_TYPE_CHEST:
-                    if (m_loot && m_groupLootTimer)
+                    if (m_loot)
                     {
-                        if (m_groupLootTimer <= diff)
+                        m_loot->Update();
+
+                        // Non-consumable chest was partially looted and restock time passed, restock all loot now
+                        if (GetGOInfo()->chest.consumable == 0 && m_restockTime && GameTime::GetGameTime() >= m_restockTime)
                         {
-                            if (Group* group = sGroupMgr->GetGroupByGUID(lootingGroupLowGUID))
-                                group->EndRoll(m_loot.get(), GetMap());
-
-                            m_groupLootTimer = 0;
-                            lootingGroupLowGUID.Clear();
+                            m_restockTime = 0;
+                            m_lootState = GO_READY;
+                            ClearLoot();
+                            UpdateDynamicFlagsForNearbyPlayers();
                         }
-                        else
-                            m_groupLootTimer -= diff;
-                    }
-
-                    // Non-consumable chest was partially looted and restock time passed, restock all loot now
-                    if (GetGOInfo()->chest.consumable == 0 && GameTime::GetGameTime() >= m_restockTime)
-                    {
-                        m_restockTime = 0;
-                        m_lootState = GO_READY;
-                        AddToObjectUpdateIfNeeded();
                     }
                     break;
                 case GAMEOBJECT_TYPE_TRAP:
@@ -1590,7 +1583,7 @@ void GameObject::Update(uint32 diff)
                         return;
             }
 
-            m_loot = nullptr;
+            ClearLoot();
 
             // Do not delete chests or goobers that are not consumed on loot, while still allowing them to despawn when they expire if summoned
             bool isSummonedAndExpired = (GetOwner() || GetSpellId()) && m_respawnTime == 0;
@@ -1741,44 +1734,46 @@ void GameObject::SendGameObjectDespawn()
     SendMessageToSet(packet.Write(), true);
 }
 
-void GameObject::getFishLoot(Loot* fishloot, Player* loot_owner)
+Loot* GameObject::getFishLoot(Player* lootOwner)
 {
-    fishloot->clear();
-
-    uint32 zone, subzone;
     uint32 defaultzone = 1;
-    GetZoneAndAreaId(zone, subzone);
+    Loot* fishLoot = new Loot(GetMap(), GetGUID(), LOOT_FISHING, nullptr);
 
-    // if subzone loot exist use it
-    fishloot->FillLoot(subzone, LootTemplates_Fishing, loot_owner, true, true);
-    if (fishloot->empty())  //use this becase if zone or subzone has set LOOT_MODE_JUNK_FISH,Even if no normal drop, fishloot->FillLoot return true. it wrong.
+    uint32 areaId = GetAreaId();
+    while (AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaId))
     {
-        //subzone no result,use zone loot
-        fishloot->FillLoot(zone, LootTemplates_Fishing, loot_owner, true, true);
-        //use zone 1 as default, somewhere fishing got nothing,becase subzone and zone not set, like Off the coast of Storm Peaks.
-        if (fishloot->empty())
-            fishloot->FillLoot(defaultzone, LootTemplates_Fishing, loot_owner, true, true);
+        fishLoot->FillLoot(areaId, LootTemplates_Fishing, lootOwner, true, true, LOOT_MODE_DEFAULT, ItemContext::NONE);
+        if (!fishLoot->isLooted())
+            break;
+
+        areaId = areaEntry->ParentAreaID;
     }
+
+    if (fishLoot->isLooted())
+        fishLoot->FillLoot(defaultzone, LootTemplates_Fishing, lootOwner, true, true, LOOT_MODE_DEFAULT, ItemContext::NONE);
+
+    return fishLoot;
 }
 
-void GameObject::getFishLootJunk(Loot* fishloot, Player* loot_owner)
+Loot* GameObject::getFishLootJunk(Player* lootOwner)
 {
-    fishloot->clear();
-
-    uint32 zone, subzone;
     uint32 defaultzone = 1;
-    GetZoneAndAreaId(zone, subzone);
+    Loot* fishLoot = new Loot(GetMap(), GetGUID(), LOOT_FISHING_JUNK, nullptr);
 
-    // if subzone loot exist use it
-    fishloot->FillLoot(subzone, LootTemplates_Fishing, loot_owner, true, true, LOOT_MODE_JUNK_FISH);
-    if (fishloot->empty())  //use this becase if zone or subzone has normal mask drop, then fishloot->FillLoot return true.
+    uint32 areaId = GetAreaId();
+    while (AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaId))
     {
-        //use zone loot
-        fishloot->FillLoot(zone, LootTemplates_Fishing, loot_owner, true, true, LOOT_MODE_JUNK_FISH);
-        if (fishloot->empty())
-            //use zone 1 as default
-            fishloot->FillLoot(defaultzone, LootTemplates_Fishing, loot_owner, true, true, LOOT_MODE_JUNK_FISH);
+        fishLoot->FillLoot(areaId, LootTemplates_Fishing, lootOwner, true, true, LOOT_MODE_JUNK_FISH, ItemContext::NONE);
+        if (!fishLoot->isLooted())
+            break;
+
+        areaId = areaEntry->ParentAreaID;
     }
+
+    if (fishLoot->isLooted())
+        fishLoot->FillLoot(defaultzone, LootTemplates_Fishing, lootOwner, true, true, LOOT_MODE_JUNK_FISH, ItemContext::NONE);
+
+    return fishLoot;
 }
 
 void GameObject::SaveToDB()
@@ -2460,12 +2455,14 @@ void GameObject::SwitchDoorOrButton(bool activate, bool alternative /* = false *
         SetGoState(GO_STATE_READY);
 }
 
-void GameObject::Use(Unit* user)
+void GameObject::Use(Unit* user, bool ignoreCastInProgress /*= false*/)
 {
     // by default spell caster is user
     Unit* spellCaster = user;
     uint32 spellId = 0;
-    bool triggered = false;
+    CastSpellExtraArgs spellArgs;
+    if (ignoreCastInProgress)
+        spellArgs.TriggerFlags |= TRIGGERED_IGNORE_CAST_IN_PROGRESS;
 
     if (Player* playerUser = user->ToPlayer())
     {
@@ -2750,10 +2747,16 @@ void GameObject::Use(Unit* user)
                             SetLootState(GO_JUST_DEACTIVATED);
                         }
                         else
-                            player->SendLoot(GetGUID(), LOOT_FISHING);
+                        {
+                            m_loot.reset(getFishLoot(player));
+                            player->SendLoot(*m_loot);
+                        }
                     }
                     else // If fishing skill is too low, send junk loot.
-                        player->SendLoot(GetGUID(), LOOT_FISHING_JUNK);
+                    {
+                        m_loot.reset(getFishLootJunk(player));
+                        player->SendLoot(*m_loot);
+                    }
                     break;
                 }
                 case GO_JUST_DEACTIVATED:                   // nothing to do, will be deleted at next update
@@ -2823,7 +2826,7 @@ void GameObject::Use(Unit* user)
                 player->CastSpell(player, info->ritual.animSpell, true);
 
                 // for this case, summoningRitual.spellId is always triggered
-                triggered = true;
+                spellArgs.TriggerFlags = TRIGGERED_FULL_MASK;
             }
 
             // full amount unique participants including original summoner
@@ -2839,7 +2842,7 @@ void GameObject::Use(Unit* user)
                     // spell have reagent and mana cost but it not expected use its
                     // it triggered spell in fact cast at currently channeled GO
                     spellId = 61993;
-                    triggered = true;
+                    spellArgs.TriggerFlags = TRIGGERED_FULL_MASK;
                 }
 
                 // Cast casterTargetSpell at a random GO user
@@ -2960,7 +2963,11 @@ void GameObject::Use(Unit* user)
 
             Player* player = user->ToPlayer();
 
-            player->SendLoot(GetGUID(), LOOT_FISHINGHOLE);
+            Loot* loot = new Loot(GetMap(), GetGUID(), LOOT_FISHINGHOLE, nullptr);
+             loot->FillLoot(GetGOInfo()->GetLootId(), LootTemplates_Gameobject, player, true, false, LOOT_MODE_DEFAULT, ItemContext::NONE);
+
+
+            player->SendLoot(*loot);
             player->UpdateCriteria(CriteriaType::CatchFishInFishingHole, GetGOInfo()->entry);
             return;
         }
@@ -3082,9 +3089,29 @@ void GameObject::Use(Unit* user)
         sOutdoorPvPMgr->HandleCustomSpell(player, spellId, this);
 
     if (spellCaster)
-        spellCaster->CastSpell(user, spellId, triggered);
+        spellCaster->CastSpell(user, spellId, spellArgs);
     else
-        CastSpell(user, spellId);
+    {
+        SpellCastResult castResult = CastSpell(user, spellId, spellArgs);
+        if (castResult == SPELL_FAILED_SUCCESS)
+        {
+            switch (GetGoType())
+            {
+            case GAMEOBJECT_TYPE_NEW_FLAG:
+                HandleCustomTypeCommand(GameObjectType::SetNewFlagState(FlagState::Taken, user->ToPlayer()));
+                break;
+            case GAMEOBJECT_TYPE_FLAGSTAND:
+                SetFlag(GO_FLAG_IN_USE);
+                if (ZoneScript* zonescript = GetZoneScript())
+                    zonescript->OnFlagTaken(this, Object::ToPlayer(user));
+
+                Delete();
+                break;
+            default:
+                break;
+            }
+        }
+    }
 }
 
 void GameObject::SendCustomAnim(uint32 anim)
@@ -3377,7 +3404,7 @@ void GameObject::SetLootState(LootState state, Unit* unit)
     AI()->OnLootStateChanged(state, unit);
 
     // Start restock timer if the chest is partially looted or not looted at all
-    if (GetGoType() == GAMEOBJECT_TYPE_CHEST && state == GO_ACTIVATED && GetGOInfo()->chest.chestRestockTime > 0 && m_restockTime == 0)
+    if (GetGoType() == GAMEOBJECT_TYPE_CHEST && state == GO_ACTIVATED && GetGOInfo()->chest.chestRestockTime > 0 && m_restockTime == 0 && m_loot && m_loot->IsChanged())
         m_restockTime = GameTime::GetGameTime() + GetGOInfo()->chest.chestRestockTime;
 
     if (GetGoType() == GAMEOBJECT_TYPE_DOOR) // only set collision for doors on SetGoState
@@ -3392,6 +3419,16 @@ void GameObject::SetLootState(LootState state, Unit* unit)
 
         EnableCollision(collision);
     }
+}
+
+void GameObject::ClearLoot()
+{
+    // Unlink loot objects from this GameObject before destroying to avoid accessing freed memory from Loot destructor
+    std::unique_ptr<Loot> loot(std::move(m_loot));
+
+    loot.reset();
+    m_unique_users.clear();
+    m_usetimes = 0;
 }
 
 void GameObject::SetLootGenerationTime()

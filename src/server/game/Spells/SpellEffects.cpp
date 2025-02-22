@@ -1513,73 +1513,6 @@ void Spell::EffectEnergizePct()
     unitCaster->EnergizeBySpell(unitTarget, m_spellInfo, gain, power);
 }
 
-void Spell::SendLoot(ObjectGuid guid, LootType loottype)
-{
-    Player* player = m_caster->ToPlayer();
-    if (!player)
-        return;
-
-    if (gameObjTarget)
-    {
-        // Players shouldn't be able to loot gameobjects that are currently despawned
-        if (!gameObjTarget->isSpawned() && !player->IsGameMaster())
-        {
-            TC_LOG_ERROR("entities.player.cheat", "Possible hacking attempt: Player {} {} tried to loot a gameobject {} which is on respawn timer without being in GM mode!",
-                            player->GetName().c_str(), player->GetGUID().ToString().c_str(), gameObjTarget->GetGUID().ToString().c_str());
-            return;
-        }
-        // special case, already has GossipHello inside so return and avoid calling twice
-        if (gameObjTarget->GetGoType() == GAMEOBJECT_TYPE_GOOBER)
-        {
-            gameObjTarget->Use(player);
-            return;
-        }
-
-        player->PlayerTalkClass->ClearMenus();
-        if (gameObjTarget->AI()->OnGossipHello(player))
-            return;
-
-        switch (gameObjTarget->GetGoType())
-        {
-            case GAMEOBJECT_TYPE_DOOR:
-            case GAMEOBJECT_TYPE_BUTTON:
-                gameObjTarget->UseDoorOrButton(0, false, player);
-                return;
-
-            case GAMEOBJECT_TYPE_QUESTGIVER:
-                player->PrepareGossipMenu(gameObjTarget, gameObjTarget->GetGOInfo()->questgiver.gossipID, true);
-                player->SendPreparedGossip(gameObjTarget);
-                return;
-
-            case GAMEOBJECT_TYPE_SPELL_FOCUS:
-                // triggering linked GO
-                if (uint32 trapEntry = gameObjTarget->GetGOInfo()->spellFocus.linkedTrap)
-                    gameObjTarget->TriggeringLinkedGameObject(trapEntry, player);
-                return;
-
-            case GAMEOBJECT_TYPE_CHEST:
-                /// @todo possible must be moved to loot release (in different from linked triggering)
-                if (gameObjTarget->GetGOInfo()->chest.triggeredEvent)
-                {
-                    TC_LOG_DEBUG("spells", "Chest ScriptStart id {} for GO {}", gameObjTarget->GetGOInfo()->chest.triggeredEvent, gameObjTarget->GetSpawnId());
-                    GameEvents::Trigger(gameObjTarget->GetGOInfo()->chest.triggeredEvent, player, gameObjTarget);
-                }
-
-                // triggering linked GO
-                if (uint32 trapEntry = gameObjTarget->GetGOInfo()->chest.linkedTrap)
-                    gameObjTarget->TriggeringLinkedGameObject(trapEntry, player);
-
-                // Don't return, let loots been taken
-                break;
-            default:
-                break;
-        }
-    }
-
-    // Send loot
-    player->SendLoot(guid, loottype);
-}
-
 void Spell::EffectOpenLock()
 {
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
@@ -1640,7 +1573,7 @@ void Spell::EffectOpenLock()
     }
 
     if (gameObjTarget)
-        SendLoot(guid, LOOT_CHEST);
+        gameObjTarget->Use(player, true);
     else if (itemTarget)
     {
         itemTarget->SetItemFlag(ITEM_FIELD_FLAG_UNLOCKED);
@@ -2199,12 +2132,36 @@ void Spell::EffectPickPocket()
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
+    Player* player = m_caster->ToPlayer();
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    // victim have to be alive and humanoid or undead
-    if (unitTarget->IsAlive() && (unitTarget->GetCreatureTypeMask() & CREATURE_TYPEMASK_HUMANOID_OR_UNDEAD) != 0)
-        m_caster->ToPlayer()->SendLoot(unitTarget->GetGUID(), LOOT_PICKPOCKETING);
+    Creature* creature = Object::ToCreature(unitTarget);
+    if (!creature)
+        return;
+
+    if (creature->CanGeneratePickPocketLoot())
+    {
+        creature->StartPickPocketRefillTimer();
+
+        creature->m_loot.reset(new Loot(creature->GetMap(), creature->GetGUID(), LOOT_PICKPOCKETING, nullptr));
+        if (uint32 lootid = creature->GetCreatureTemplate()->pickpocketLootId)
+            creature->m_loot->FillLoot(lootid, LootTemplates_Pickpocketing, player, true);
+
+        // Generate extra money for pick pocket loot
+        const uint32 a = urand(0, creature->GetLevel() / 2);
+        const uint32 b = urand(0, player->GetLevel() / 2);
+        creature->m_loot->gold = uint32(10 * (a + b) * sWorld->getRate(RATE_DROP_MONEY));
+    }
+    else if (creature->m_loot)
+    {
+        if (creature->m_loot->loot_type == LOOT_PICKPOCKETING && creature->m_loot->isLooted())
+            player->SendLootError(creature->m_loot->GetGUID(), creature->GetGUID(), LOOT_ERROR_ALREADY_PICKPOCKETED);
+
+        return;
+    }
+
+    player->SendLoot(*creature->m_loot);
 }
 
 void Spell::EffectAddFarsight()
@@ -3427,8 +3384,12 @@ void Spell::EffectDisEnchant()
 
     if (Player* caster = m_caster->ToPlayer())
     {
-        caster->UpdateCraftSkill(m_spellInfo);
-        caster->SendLoot(itemTarget->GetGUID(), LOOT_DISENCHANTING);
+        if (!m_CastItem)
+            caster->UpdateCraftSkill(m_spellInfo);
+
+        itemTarget->m_loot.reset(new Loot(caster->GetMap(), itemTarget->GetGUID(), LOOT_DISENCHANTING, nullptr));
+        itemTarget->m_loot->FillLoot(itemTarget->GetDisenchantLoot(caster)->ID, LootTemplates_Disenchant, caster, true);
+        caster->SendLoot(*itemTarget->m_loot);
     }
 
     // item will be removed at disenchanting end
@@ -3787,7 +3748,9 @@ void Spell::EffectSkinning()
 
     creature->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
     creature->SetDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
-    player->SendLoot(creature->GetGUID(), LOOT_SKINNING);
+    Loot* loot = new Loot(creature->GetMap(), creature->GetGUID(), LOOT_SKINNING, nullptr);
+    loot->FillLoot(creature->GetCreatureTemplate()->SkinLootId, LootTemplates_Skinning, player, true);
+    player->SendLoot(*loot);
 
     if (skill == SKILL_SKINNING)
     {
@@ -4482,7 +4445,9 @@ void Spell::EffectProspecting()
         player->UpdateGatherSkill(SKILL_JEWELCRAFTING, SkillValue, reqSkillValue);
     }
 
-    player->SendLoot(itemTarget->GetGUID(), LOOT_PROSPECTING);
+    itemTarget->m_loot.reset(new Loot(player->GetMap(), itemTarget->GetGUID(), LOOT_PROSPECTING, nullptr));
+    itemTarget->m_loot->FillLoot(itemTarget->GetEntry(), LootTemplates_Prospecting, player, true);
+    player->SendLoot(*itemTarget->m_loot);
 }
 
 void Spell::EffectMilling()
@@ -4507,7 +4472,9 @@ void Spell::EffectMilling()
         player->UpdateGatherSkill(SKILL_INSCRIPTION, SkillValue, reqSkillValue);
     }
 
-    player->SendLoot(itemTarget->GetGUID(), LOOT_MILLING);
+    itemTarget->m_loot.reset(new Loot(player->GetMap(), itemTarget->GetGUID(), LOOT_MILLING, nullptr));
+    itemTarget->m_loot->FillLoot(itemTarget->GetEntry(), LootTemplates_Milling, player, true);
+    player->SendLoot(*itemTarget->m_loot);
 }
 
 void Spell::EffectSkill()

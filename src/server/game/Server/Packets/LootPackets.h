@@ -283,7 +283,7 @@ namespace WorldPackets
 
             WorldPacket const* Write() override;
 
-            std::vector<ObjectGuid> Players;
+            GuidUnorderedSet Players;
             ObjectGuid LootObj;
         };
 

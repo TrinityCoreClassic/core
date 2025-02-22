@@ -10982,8 +10982,7 @@ void Unit::SetMeleeAnimKitId(uint16 animKitId)
         // Generate loot before updating looter
         if (creature)
         {
-            creature->m_loot.reset(new Loot(creature->GetMap(), creature->GetGUID(), LOOT_CORPSE));
-            Loot* loot = creature->m_loot.get();
+            Loot* loot = new Loot(creature->GetMap(), creature->GetGUID(), LOOT_CORPSE, nullptr);
             if (creature->GetMap()->Is25ManRaid())
                 loot->maxDuplicates = 3;
 
@@ -10994,23 +10993,9 @@ void Unit::SetMeleeAnimKitId(uint16 animKitId)
                 loot->generateMoneyLoot(creature->GetCreatureTemplate()->mingold, creature->GetCreatureTemplate()->maxgold);
 
             if (group)
-            {
-                if (hasLooterGuid)
-                    group->SendLooter(creature, looter);
-                else
-                    group->SendLooter(creature, nullptr);
+                loot->NotifyLootList(creature->GetMap());
 
-                // Update round robin looter only if the creature had loot
-                if (!loot->empty())
-                    group->UpdateLooterGuid(creature);
-            }
-            else
-            {
-                WorldPackets::Loot::LootList lootList;
-                lootList.Owner = creature->GetGUID();
-                lootList.LootObj = creature->m_loot->GetGUID();
-                player->SendMessageToSet(lootList.Write(), true);
-            }
+            creature->m_loot.reset(loot);
         }
 
         player->RewardPlayerAndGroupAtKill(victim, false);
@@ -12248,15 +12233,6 @@ void Unit::JumpTo(float speedXY, float speedZ, float angle, Optional<Position> d
         float vsin = std::sin(angle+GetOrientation());
         SendMoveKnockBack(ToPlayer(), speedXY, -speedZ, vcos, vsin);
     }
-}
-
-void Unit::JumpTo(WorldObject* obj, float speedZ, bool withOrientation)
-{
-    //TODOFROST - remove method.
-    //float x, y, z;
-    //obj->GetContactPoint(this, x, y, z);
-    //float speedXY = GetExactDist2d(x, y) * 10.0f / speedZ;
-    //GetMotionMaster()->MoveJump(x, y, z, GetAbsoluteAngle(obj), speedXY, speedZ, EVENT_JUMP, withOrientation);
 }
 
 void Unit::HandleSpellClick(Unit* clicker, int8 seatId /*= -1*/)
