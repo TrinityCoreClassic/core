@@ -663,12 +663,17 @@ void Battleground::EndBattleground(Team winner)
     //we must set it this way, because end time is sent in packet!
     SetRemainingTime(TIME_AUTOCLOSE_BATTLEGROUND);
 
-    WorldPackets::Battleground::PVPMatchComplete pvpMatchComplete;
-    pvpMatchComplete.Winner = GetWinner();
-    pvpMatchComplete.Duration = std::chrono::duration_cast<Seconds>(Milliseconds(std::max<int32>(0, (GetElapsedTime() - BG_START_DELAY_2M))));
-    pvpMatchComplete.LogData.emplace();
-    BuildPvPLogDataPacket(*pvpMatchComplete.LogData);
-    pvpMatchComplete.Write();
+    //WorldPackets::Battleground::PVPMatchComplete pvpMatchComplete;
+    //pvpMatchComplete.Winner = GetWinner();
+    //pvpMatchComplete.Duration = std::chrono::duration_cast<Seconds>(Milliseconds(std::max<int32>(0, (GetElapsedTime() - BG_START_DELAY_2M))));
+    //pvpMatchComplete.LogData.emplace();
+    //BuildPvPLogDataPacket(*pvpMatchComplete.LogData);
+    //pvpMatchComplete.Write();
+
+    WorldPackets::Battleground::PVPMatchStatisticsMessage pvpMatchStatistics;
+    BuildPvPLogDataPacket(pvpMatchStatistics.Data);
+    pvpMatchStatistics.Write();
+
 
     for (BattlegroundPlayerMap::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
     {
@@ -768,7 +773,11 @@ void Battleground::EndBattleground(Team winner)
 
         BlockMovement(player);
 
-        player->SendDirectMessage(pvpMatchComplete.GetRawPacket());
+        player->SendDirectMessage(pvpMatchStatistics.GetRawPacket());
+
+        WorldPackets::Battleground::BattlefieldStatusActive battlefieldStatus;
+        sBattlegroundMgr->BuildBattlegroundStatusActive(&battlefieldStatus, this, player, player->GetBattlegroundQueueIndex(itr->second.queueTypeId), player->GetBattlegroundQueueJoinTime(itr->second.queueTypeId), itr->second.queueTypeId);
+        player->SendDirectMessage(battlefieldStatus.Write());
 
         player->UpdateCriteria(CriteriaType::ParticipateInBattleground, player->GetMapId());
 
@@ -1269,6 +1278,10 @@ void Battleground::BuildPvPLogDataPacket(WorldPackets::Battleground::PVPMatchSta
 
             pvpLogData.Statistics.push_back(playerData);
         }
+    }
+
+    if (GetStatus() == BattlegroundStatus::STATUS_WAIT_LEAVE) {
+        pvpLogData.Winner = GetWinner();
     }
 
     pvpLogData.PlayerCount[PVP_TEAM_HORDE] = int8(GetPlayersCountByTeam(HORDE));
