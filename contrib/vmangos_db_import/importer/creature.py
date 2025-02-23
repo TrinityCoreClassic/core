@@ -7,15 +7,16 @@ next_entry_guid = 333000
 pool_entry_offset = 1000000
 
 imported_entry_guids = {}
+cleaned_entry_guids = []
 
 def Import():
     global next_entry_guid
     next_creature_row = db.tri_world.get_row_raw("SELECT MAX(guid) FROM creature")
     next_entry_guid = next_creature_row[0] + 1
     
-    #clean_templates_check_vmangos()
-    #clean_entries_check_vmangos()
-    # import_templates_vmangos()
+    clean_templates_check_vmangos()
+    clean_entries_check_vmangos()
+    import_templates_vmangos()
     import_entries_vmangos()
     update_instance_info()
 
@@ -68,7 +69,7 @@ def _handle_clean_template_row(row):
         for entity in entities:
             db.tri_world.execute_many_raw(delete_src_creature_entity_queries, (entity[0],))      
                 
-        db.tri_world.execute_many_raw(delete_src_queries, (entity[0],))
+        db.tri_world.execute_many_raw(delete_src_queries, (row[0],))
             
         return -1
     
@@ -76,7 +77,7 @@ def _handle_clean_template_row(row):
 
 def clean_entries_check_vmangos(): 
     db.tri_world.chunk_raw(
-        "SELECT guid, id, map, position_x, position_y, position_z FROM creature LIMIT %s OFFSET %s",
+        "SELECT guid, id, map, position_x, position_y, position_z FROM creature ORDER BY guid ASC LIMIT %s OFFSET %s",
         500,
         _handle_clean_entry_row
     )    
@@ -90,7 +91,7 @@ def _handle_clean_entry_row(row):
         ("DELETE FROM creature WHERE guid = %s"),
     ]
     
-    match = db.vm_world.select_one(
+    matches = db.vm_world.select_all(
         db.SelectQuery("creature").where(
             db.GroupCondition("AND").condition(
                 db.GroupCondition('OR').condition(
@@ -107,18 +108,26 @@ def _handle_clean_entry_row(row):
             ).condition(
                 'map', '=', row[2]
             ).condition(
-                'position_x', 'BETWEEN', [row[3] - 0.01, row[3] + 0.01]
+                'position_x', 'BETWEEN', [row[3] - 0.001, row[3] + 0.001]
             ).condition(
-                'position_y', 'BETWEEN', [row[4] - 0.01, row[4] + 0.01]
+                'position_y', 'BETWEEN', [row[4] - 0.001, row[4] + 0.001]
             ).condition(
-                'position_z', 'BETWEEN', [row[5] - 0.01, row[5] + 0.01]
+                'position_z', 'BETWEEN', [row[5] - 0.001, row[5] + 0.001]
             )
         )
     )
     
-    if match == None:
+    global cleaned_entry_guids
+    
+    for match in matches:
+        if match['guid'] in cleaned_entry_guids:
+            matches.remove(match)
+    
+    if len(matches) == 0:
         db.tri_world.execute_many_raw(delete_src_obj_creature_queries, (row[0],))                
         return -1
+    else:
+        cleaned_entry_guids.append(matches[0]['guid'])
     
     return 0
      
@@ -202,13 +211,18 @@ def import_entries_vmangos():
             pool_name = 'Vmangos Inline Creature ({})'.format(vm_entry['guid'])
             pool_id = pool_entry_offset + vm_entry['guid']
             
-            db.tri_world.upsert(
-                db.UpsertQuery('pool_template').values({
-                    'entry':pool_id,
-                    'max_limit': 1,
-                    'description': pool_name
-                })
-            )
+            existing_pool_template = db.tri_world.select_one(
+                    db.SelectQuery('pool_template').where('entry', '=', pool_id)
+                )
+            
+            if existing_pool_template == None:
+                db.tri_world.upsert(
+                    db.UpsertQuery('pool_template').values({
+                        'entry':pool_id,
+                        'max_limit': 1,
+                        'description': pool_name
+                    })
+                )
             
             for tc_spawn in tc_pooled_guids:
                 #TODO there does appear to be an issue where, where the same GUID can occur in multiple pools
@@ -517,7 +531,7 @@ def _upsert_creature_entry(vm_ce_guid, vm_ce_id, tri_ce_guid = None):
     
     if try_vm_template:
         vm_template = db.vm_world.select_one(
-            db.SelectQuery("creature_template").select("entry, equipment_id").where("entry", "=", vm_row['id'])
+            db.SelectQuery("creature_template").select("entry, equipment_id").where("entry", "=", vm_ce_id)
         )
         
         if vm_template:
