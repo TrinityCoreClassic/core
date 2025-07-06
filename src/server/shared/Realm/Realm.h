@@ -20,6 +20,8 @@
 
 #include "Common.h"
 #include "AsioHacksFwd.h"
+#include <boost/asio/ip/address.hpp>
+#include <vector>
 
 enum RealmFlags
 {

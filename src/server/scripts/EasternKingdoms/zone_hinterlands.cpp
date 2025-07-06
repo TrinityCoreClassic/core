@@ -29,6 +29,7 @@ EndContentData */
 #include "MotionMaster.h"
 #include "Position.h"
 #include "ScriptedCreature.h"
+#include "WaypointDefines.h"
 
 /*######
 ## npc_sharpbeak used by Entrys 43161 & 51125

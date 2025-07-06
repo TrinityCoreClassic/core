@@ -19,7 +19,9 @@
 #include "CharacterCache.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"
+#include "Log.h"
 #include "World.h"
+#include <cmath>
 
 inline float finiteAlways(float f) { return std::isfinite(f) ? f : 0.0f; }
 

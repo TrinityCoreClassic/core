@@ -23,6 +23,7 @@
 #include "GroupInstanceRefManager.h"
 #include "GroupRefManager.h"
 #include "Loot.h"
+#include "Map.h"
 #include "Object.h"
 #include "RaceMask.h"
 #include "SharedDefines.h"

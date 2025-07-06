@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 
+class InstanceMap;
 class InstanceScenario;
 class Map;
 struct ScenarioEntry;

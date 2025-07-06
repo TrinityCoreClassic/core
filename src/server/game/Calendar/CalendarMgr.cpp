@@ -26,6 +26,7 @@
 #include "Mail.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "WorldSession.h"
 #include <sstream>
 
 CalendarInvite::CalendarInvite() : _inviteId(1), _eventId(0), _invitee(), _senderGUID(), _responseTime(0),

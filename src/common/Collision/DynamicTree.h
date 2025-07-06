@@ -19,6 +19,7 @@
 #define _DYNTREE_H
 
 #include "Define.h"
+#include "Optional.h"
 
 namespace G3D
 {
