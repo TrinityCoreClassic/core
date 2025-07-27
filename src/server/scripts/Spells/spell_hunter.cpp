@@ -27,6 +27,7 @@
 #include "Pet.h"
 #include "SpellAuraEffects.h"
 #include "SpellHistory.h"
+#include "SpellMgr.h"
 #include "SpellScript.h"
 
 enum HunterSpells

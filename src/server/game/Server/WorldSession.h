@@ -46,6 +46,7 @@ class Creature;
 class InstanceLock;
 class Item;
 class LoginQueryHolder;
+class Loot;
 class Player;
 class Unit;
 class Warden;

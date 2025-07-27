@@ -1118,7 +1118,7 @@ namespace UF
         Compat::UpdateFieldArray<uint32, 4, GAMEOBJECT_STATE_WORLD_EFFECT_ID - GAMEOBJECT_START> StateWorldEffectIDs;
         Compat::UpdateField<uint32, GAMEOBJECT_FIELD_CUSTOM_PARAM - GAMEOBJECT_START> CustomParam;
         
-        Compat::DynamicUpdateField<int32, GAMEOBJECT_DYNAMIC_ENABLE_DOODAD_SETS - UF::GAMEOBJECT_DYNAMIC_END> EnableDoodadSets;
+        Compat::DynamicUpdateField<int32, GAMEOBJECT_DYNAMIC_ENABLE_DOODAD_SETS - GAMEOBJECT_DYNAMIC_START> EnableDoodadSets;
 
         void WriteUpdate(ObjectUpdateType updatetype, ByteBuffer& data, Compat::UpdateMaskBuf& mask, Compat::UpdateFlags const& flags, GameObject const* owner, Player const* receiver) const;
         void WriteDynamicUpdate(ObjectUpdateType updatetype, ByteBuffer& data, Compat::UpdateMaskBuf& mask, Compat::UpdateFlags const& flags, GameObject const* owner, Player const* receiver) const;

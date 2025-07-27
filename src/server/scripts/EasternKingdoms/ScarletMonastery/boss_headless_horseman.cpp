@@ -33,6 +33,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellScript.h"
 #include "SpellInfo.h"
+#include "WaypointDefines.h"
 
 enum HeadlessHorsemanSays
 {

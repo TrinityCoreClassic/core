@@ -25,6 +25,7 @@ Script Data End */
 #include "ScriptedCreature.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
+#include "WaypointDefines.h"
 
 enum DumpyKeeshan
 {

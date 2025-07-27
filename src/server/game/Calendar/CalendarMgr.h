@@ -26,6 +26,7 @@
 #include <set>
 #include <vector>
 
+class Player;
 class WorldPacket;
 
 enum CalendarMailAnswers

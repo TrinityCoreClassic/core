@@ -20,6 +20,7 @@
 
 #include "Common.h"
 #include "ObjectGuid.h"
+#include "SharedDefines.h"
 
 struct HonorScores
 {

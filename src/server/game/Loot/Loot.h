@@ -22,14 +22,18 @@
 #include "ConditionMgr.h"
 #include "DBCEnums.h"
 #include "ItemEnchantmentMgr.h"
+#include "LootItemType.h"
 #include "ObjectGuid.h"
+#include "Optional.h"
 #include "RefManager.h"
 #include "SharedDefines.h"
+#include "Duration.h"
 #include <unordered_map>
 #include <vector>
 
 constexpr Minutes LOOT_ROLL_TIMEOUT = 1min;
 
+class Group;
 class Item;
 class LootStore;
 class Map;
