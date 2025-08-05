@@ -347,7 +347,7 @@ UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
 
 uint32 UpdateFetcher::Apply(Path const& path) const
 {
-    using Time = std::chrono::high_resolution_clock;
+    using Time = std::chrono::steady_clock;
 
     // Benchmark query speed
     auto const begin = Time::now();

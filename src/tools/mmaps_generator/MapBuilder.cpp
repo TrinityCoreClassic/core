@@ -26,6 +26,8 @@
 #include <DetourNavMesh.h>
 #include <DetourNavMeshBuilder.h>
 #include <climits>
+#include <mutex>
+static std::mutex mmapTileFreeMutex;
 
 namespace MMAP
 {
@@ -922,7 +924,10 @@ namespace MMAP
             fclose(file);
 
             // now that tile is written to disk, we can unload it
-            navMesh->removeTile(tileRef, nullptr, nullptr);
+            {
+                std::lock_guard<std::mutex> lock(mmapTileFreeMutex);
+                navMesh->removeTile(tileRef, nullptr, nullptr);
+            }
         }
         while (false);
 

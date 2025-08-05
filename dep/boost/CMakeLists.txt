@@ -36,13 +36,13 @@ endif()
 
 if (WIN32)
   # On windows the requirements are higher according to the wiki.
-  set(BOOST_REQUIRED_VERSION 1.78)
+  set(BOOST_REQUIRED_VERSION_MIN 1.78) 
+  set(BOOST_REQUIRED_VERSION_MAX 1.84)  
 else()
   set(BOOST_REQUIRED_VERSION 1.74)
 endif()
 
 find_package(Boost ${BOOST_REQUIRED_VERSION}
-  REQUIRED
   COMPONENTS 
     system
     filesystem
@@ -51,12 +51,19 @@ find_package(Boost ${BOOST_REQUIRED_VERSION}
     locale
   CONFIG
   HINTS
-    ${BOOST_SEARCH_HINTS})
+    ${BOOST_SEARCH_HINTS}
+)
 
-if(NOT Boost_FOUND)
-  if(NOT DEFINED ENV{BOOST_ROOT} AND NOT DEFINED Boost_DIR AND NOT DEFINED BOOST_ROOT AND NOT DEFINED BOOSTROOT)
-    message(FATAL_ERROR "No BOOST_ROOT environment variable could be found! Please make sure it is set and the points to your Boost installation.")
-  endif()
+if (NOT Boost_FOUND)
+message(FATAL_ERROR
+" Could not find Boost ${BOOST_REQUIRED_VERSION_MIN} – ${BOOST_REQUIRED_VERSION_MAX}!\n"
+" Install Boost and set BOOST_ROOT environment variable."
+"\n"
+"Then:\n"
+"  - Delete CMake cache.\n"
+"  - Clear your build output directory.\n"
+"  - Restart CMake and configure again."
+)
 endif()
 
 add_library(boost INTERFACE)

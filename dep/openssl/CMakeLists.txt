@@ -9,13 +9,14 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 
-# basic packagesearching and setup
-# (further support will be needed, this is a preliminary release!)
-find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto SSL)
+# Assume OpenSSL was resolved in the top-level CMakeLists.txt
+message(STATUS "✔ OpenSSL already resolved by top-level CMakeLists.txt")
 
 add_library(openssl INTERFACE)
 
+target_include_directories(openssl INTERFACE ${OPENSSL_INCLUDE_DIR})
+
 target_link_libraries(openssl
   INTERFACE
-    OpenSSL::Crypto
-    OpenSSL::SSL)
+    ${OPENSSL_SSL_LIBRARY}
+    ${OPENSSL_CRYPTO_LIBRARY})

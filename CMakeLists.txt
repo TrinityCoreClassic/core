@@ -10,6 +10,9 @@
 
 cmake_minimum_required(VERSION 3.24)
 
+# Add module paths BEFORE project() to override FindOpenSSL.cmake early
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/macros")
+
 # add this options before PROJECT keyword
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -25,15 +28,11 @@ if(POLICY CMP0153)
   cmake_policy(SET CMP0153 NEW) # The exec_program() command should not be called
 endif()
 
-# Set RPATH-handing (CMake parameters)
+# Set RPATH-handling (CMake parameters)
 set(CMAKE_SKIP_BUILD_RPATH 0)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH 0)
 list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH 1)
-
-# set macro-directory
-list(APPEND CMAKE_MODULE_PATH
-  "${CMAKE_SOURCE_DIR}/cmake/macros")
 
 # build in Release-mode by default if not explicitly set
 if(CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
@@ -77,6 +76,51 @@ include(cmake/genrev.cmake)
 # print out the results before continuing
 include(cmake/showoptions.cmake)
 
+# --- Begin final OpenSSL detection ---
+if (WIN32)
+    set(_OPENSSL_HINTS "")
+
+    # 1. Add OPENSSL_ROOT_DIR env var if it's set
+    if(DEFINED ENV{OPENSSL_ROOT_DIR})
+        list(APPEND _OPENSSL_HINTS "$ENV{OPENSSL_ROOT_DIR}")
+    endif()
+
+    # 2. Add standard install locations
+    if (DEFINED ENV{ProgramFiles})
+        list(APPEND _OPENSSL_HINTS
+            "$ENV{ProgramFiles}/OpenSSL-Win64"
+            "$ENV{ProgramFiles}/OpenSSL-Win32")
+    endif()
+
+    # 3. Try detection
+    set(_OPENSSL_FOUND FALSE)
+    foreach(_path IN LISTS _OPENSSL_HINTS)
+        if (EXISTS "${_path}/lib/VC/x64/MD/libssl.lib")
+            message(STATUS "Auto-detected OpenSSL at: ${_path}")
+            set(OPENSSL_ROOT_DIR "${_path}" CACHE PATH "OpenSSL root directory" FORCE)
+            set(OPENSSL_INCLUDE_DIR "${_path}/include" CACHE PATH "OpenSSL include directory" FORCE)
+            set(OPENSSL_SSL_LIBRARY "${_path}/lib/VC/x64/MD/libssl.lib" CACHE FILEPATH "SSL library" FORCE)
+            set(OPENSSL_CRYPTO_LIBRARY "${_path}/lib/VC/x64/MD/libcrypto.lib" CACHE FILEPATH "Crypto library" FORCE)
+            set(_OPENSSL_FOUND TRUE)
+            break()
+        endif()
+    endforeach()
+
+    # 4. Fail if not found
+    if (NOT _OPENSSL_FOUND)
+        message(FATAL_ERROR
+  "Could not find OpenSSL!\n"
+  "Install OpenSSL, set the OPENSSL_ROOT_DIR environment variable or install to a standard location: C:/Program Files/OpenSSL-Win64\.n"
+  "Then:"
+  "\n"
+  "  - Delete CMake cache.\n"
+  "  - Clear build output directory.\n"
+  "  - Restart CMake and configure again."
+)
+    endif()
+endif()
+# --- End final OpenSSL detection ---
+
 # add dependencies
 add_subdirectory(dep)
 
@@ -97,3 +141,4 @@ if(BUILD_TESTING)
     set_property(GLOBAL PROPERTY USE_FOLDERS OFF)
   endif()
 endif()
+
