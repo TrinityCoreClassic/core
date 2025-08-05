@@ -26,6 +26,7 @@
 #include "TaskScheduler.h"
 #include "ScriptMgr.h"
 #include "TemporarySummon.h"
+#include "WaypointDefines.h"
 #include <sstream>
 
 /*

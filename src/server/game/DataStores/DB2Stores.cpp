@@ -23,6 +23,7 @@
 #include "ItemTemplate.h"
 #include "IteratorPair.h"
 #include "Log.h"
+#include "Player.h"
 #include "Random.h"
 #include "Regex.h"
 #include "Timer.h"

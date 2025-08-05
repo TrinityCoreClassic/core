@@ -15,6 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "SharedDefines.h"
+
 // This is where scripts' loading functions should be declared:
 void AddSC_blackrock_depths();               //Blackrock Depths
 void AddSC_boss_ambassador_flamelash();
