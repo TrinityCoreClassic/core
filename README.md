@@ -8,10 +8,10 @@ It's a project that was started by https://github.com/Frostshake/TrinityCoreClas
 **TrinityCoreClassic Discord**
 https://discord.gg/8p9M9RXX3y
 
-Project starting point: https://github.com/TrinityCore/TrinityCore/tree/wotlk_classic
-Database starting point: https://github.com/TrinityCore/TrinityCore/releases/tag/TDB927.22082
-Vanilla behavior references: https://github.com/vmangos/core
-1.12-1.14.x conversions: https://github.com/WowLegacyCore/HermesProxy
+|Project starting point:| |https://github.com/TrinityCore/TrinityCore/tree/wotlk_classic|
+|Database starting point:| |https://github.com/TrinityCore/TrinityCore/releases/tag/TDB927.22082|
+|Vanilla behavior references:| |https://github.com/vmangos/core|
+|1.12-1.14.x conversions:| |https://github.com/WowLegacyCore/HermesProxy|
 
 # Goal
 Creating a server emulator core that gives the true vanilla experience for a modern classic client.
