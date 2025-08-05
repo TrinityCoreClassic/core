@@ -13,8 +13,8 @@ Database starting point: https://github.com/TrinityCore/TrinityCore/releases/tag
 Vanilla behavior references: https://github.com/vmangos/core
 1.12-1.14.x conversions: https://github.com/WowLegacyCore/HermesProxy
 
-# Goal:
-Achieve making a server emulator core that gives the true vanilla experience for a modern classic client.
+# Goal
+Creating a server emulator core that gives the true vanilla experience for a modern classic client.
 
 # Current state
 You can log in and play for the most part. That being said, there is still a lot of work that still needs to be done, especially regarding the database and class\spell\npc behavior.
