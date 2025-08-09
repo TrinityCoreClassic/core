@@ -22,7 +22,7 @@ https://discord.gg/8p9M9RXX3y
 
 ## Documentation
 
-- [Installation Guide](installation.md)
+- [Installation Guide](docs/installation.md)
 
 # Copyright
 License: GPL 2.0
