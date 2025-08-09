@@ -14,5 +14,5 @@
 1. Install GIT. Just click next on every step unless you know what you're doing.  
   
 2. Install Visual Studio 22 Community. Make sure you toggle the Desktop development for C++ workload for installation.
-![alt text[(https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/Screenshot%202025-08-09%20113033.png)
+![Alt text]([https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/Screenshot%202025-08-09%20113033.png](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/Screenshot%202025-08-09%20113033.png)
 
