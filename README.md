@@ -20,6 +20,10 @@ You can log in and play for the most part. That being said, there is still a lot
 
 https://discord.gg/8p9M9RXX3y
 
+## Documentation
+
+- [Installation Guide](installation.md)
+
 # Copyright
 License: GPL 2.0
 
