@@ -2,6 +2,7 @@
 
 | Software                               | Link                                                                                                    | Notes                                                                |
 |----------------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
+|----------------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
 | **GIT**                                | [Download](https://git-scm.com/downloads/win)                                                           | Version control system                                               |
 | **Visual Studio 2022 Community**       | [Download](https://visualstudio.microsoft.com/downloads/)                                               | Choose Desktop development with C++ workload                         |
 | **CMake**                              | [Download](https://cmake.org/download/)                                                                 | Required for generating project files                                |
