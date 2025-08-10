@@ -28,13 +28,19 @@
 
 5. Install a MySQL Client. This is for managing the databases. I recommend HeidiSQL as it's easy and beginner friendly.
 
-Open up HeidiSQL and make a new session. Name it TrinityCoreClassic and type "127.0.0.1" right of Hostname\IP if it doesn't already say so. Insert username (root) and the password you gave when installing MySQL server in step 4. Now click "Open".  
+Open up HeidiSQL and make a new session. Name it TrinityCoreClassic and type **127.0.0.1** right of Hostname\IP if it doesn't already say so. Insert username (root) and the password you gave when installing MySQL server in step 4. Click **Open**.  
 
 ![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/heidsql.png)
 
-I highly recommend making a new user now with a distinctive username and password that you will use from now on for connecting to your WoW Server and managing your MySQL server security reasons. Tick the boxes according to the picture below and save your new user. Use these credentials from now on when managing your MySQL server unless you know what you're doing.  
+I highly recommend making a new user now with a distinctive username and password that you will use from now on for connecting to your WoW Server and managing your MySQL server for security reasons. 
 
-![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/heidsql2.png)
+Click **Tools** -> **User Manager**
+
+![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/heidsql2.png).
+
+In addition, tick these boxes on\off on your new MySQL user that you just made. It'll bolster the security further more. Hit **Save**.
+
+![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/heidsql3.png?raw=true)
 
 8. Install Boost. 1.78.0 to 1.84.0 is supported. Make sure you've downloaded the Windows binaries for Visual Studio 22 **boost_1_84_0-msvc-14.3-64.exe**.
 
