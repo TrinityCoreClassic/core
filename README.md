@@ -10,19 +10,20 @@ It's a project that was started by https://github.com/Frostshake/TrinityCoreClas
 **Vanilla behavior references:** |https://github.com/vmangos/core  
 **1.12-1.14.x conversions:** https://github.com/WowLegacyCore/HermesProxy  
 
-# Goal
+## Goal
 Creating a server emulator core that gives the true vanilla experience for a modern classic client.
 
-# Current state
+## Current state
 You can log in and play for the most part. That being said, there is still a lot of work that still needs to be done, especially regarding the database and class\spell\npc behavior.
 
-# Discord
+## Discord
 
 https://discord.gg/8p9M9RXX3y
 
 ## Documentation
 
-- [Installation Guide](docs/installation.md)
+- [Windows Installation Guide](docs/installation.md)
+- Ubuntu Installation Guide (comming soon)
 
 # Copyright
 License: GPL 2.0
