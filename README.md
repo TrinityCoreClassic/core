@@ -23,7 +23,7 @@ https://discord.gg/8p9M9RXX3y
 ## Documentation
 
 - [Windows Installation Guide](docs/installation.md)
-- Ubuntu Installation Guide (comming soon)
+- Ubuntu Installation Guide (coming soon)
 
 # Copyright
 License: GPL 2.0
