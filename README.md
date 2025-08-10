@@ -22,7 +22,7 @@ https://discord.gg/8p9M9RXX3y
 
 ## Documentation
 
-- [Windows Installation Guide](docs/installation.md)
+- [Windows Installation Guide](docs/win_installation.md)
 - Ubuntu Installation Guide (coming soon)
 
 # Copyright
