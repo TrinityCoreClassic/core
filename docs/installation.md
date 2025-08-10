@@ -75,25 +75,17 @@ When it is done cloning there will be a subfolder named **core** in **C:\Trinity
 4. You will now build the project and make it ready to get compiled.  
 
 Open CMake and click **Browse source** and browse your way to the core folder inside **C:\TrinityCoreClassic** and click **Select Folder**.  
-Now make a folder inside **C:\TrinityCoreClassic** named **build**. Once done, click **Browse build** in CMake and browse your way to the build folder and click **Select Folder**.  
+Now make a folder inside **C:\TrinityCoreClassic** named **build**. Once done, click **Browse build** in CMake and browse your way to the build folder. Click **Select Folder**. Click **Configure**. A little window should pop up. Click **Finish**.  
 
-![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/cmake.png?raw=true) 
+![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/cmake2.png?raw=true)  
 
-5. Now click **Configure** and **Finish.** You should now see a lot of red, this is normal as long as you don't get any error messages.  
-
-![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/cmake2.png?raw=true)   
-
-Click **Configure** once more. Now all the red is gone.  
+You should now see a lot of red as shown in the picture below. This is normal as long as you don't see any error messages. Click **Configure** once more.
 
 ![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/cmake3.png?raw=true)  
 
-Click **Generate**.  
+Click **Generate**. Click **Open Project**. This will launch Visual Studio 22. If you get prompted, choose to open it with Visual Studio 22.  
 
-![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/cmake4.png)  
-
-Click **Open Project**.
-
-This will launch Visual Studio 22. If you get prompted, choose to open it with Visual Studio 22.  
+![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/cmake4.png?raw=true)
 
 6. You should now be inside Visual Studio ready to compile the project.  
 
@@ -176,7 +168,7 @@ Type **y** every time it asks if you want to create a database (tcc_auth, tcc_ch
 
 When it is done close the window.
 
-4. Start **bnetserver.exe** and **worldserver.exe** and keep them open.
+4. Start **bnetserver.exe** and **worldserver.exe** (again) and keep them open.
 
 5. Now you need to create an account that you will be using to log into the game with + give yourself server admin privileges.
 
@@ -185,9 +177,10 @@ You should have 2 command-line windows open now. Go into the **worldserver.exe**
 **bnetaccount create yourusername@yourusername yourpassword**  
 **gm set account gmlevel 1#1 3 -1**  
 
-For reference: (1#1 = tcc_auth.account.id#tcc_auth.realmlist.id)
+(for reference: 1#1 = tcc_auth.account.id#tcc_auth.realmlist.id)
 
 6. You need the Arctium Launcher for 1.14.x clients now.
+
 Copy it into your client where **WowClassic.exe** is and right click drag it and make a shortcut of it.
 Right click the shortcut -> Properties and add the argument   **--version=ClassicEra** next to where it says target.
 
