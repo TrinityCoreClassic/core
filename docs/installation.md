@@ -42,14 +42,14 @@ In addition, tick these boxes on\off on your new MySQL user that you just made. 
 
 ![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/heidsql3.png?raw=true)
 
-8. Install Boost. 1.78.0 to 1.84.0 is supported. Make sure you've downloaded the Windows binaries for Visual Studio 22 **boost_1_84_0-msvc-14.3-64.exe**.
+6. Install Boost. 1.78.0 to 1.84.0 is supported. Make sure you've downloaded the Windows binaries for Visual Studio 22 **boost_1_84_0-msvc-14.3-64.exe**.
 
 After installing it you'll have to add a system variable path pointing towards where you installed it.   
 **Settings** -> **System** -> **About** (bottom) -> **Advanced system settings**.  
 
 ![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/boost.png)
 
-8. Install the latest version of OpenSSL. If you install OpenSSL to the default location **(C:\Program Files\OpenSSL-Win64)** you won't need to set a system variable path as the core will auto-detect it. If not installed to the default location you'll have to add another system variable path pointing towards where you installed it.  
+7. Install the latest version of OpenSSL. If you install OpenSSL to the default location **(C:\Program Files\OpenSSL-Win64)** you won't need to set a system variable path as the core will auto-detect it. If not installed to the default location you'll have to add another system variable path pointing towards where you installed it.  
 **Settings** -> **System** -> **About** (bottom) -> **Advanced system settings**.  
 
 ![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/openssl.png?raw=true)
@@ -168,7 +168,7 @@ Open **worldserver.conf** with a text editor and locate the line shown below on 
 ![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/worldserverconf.png)
 And do the exact same thing you did to **bnetserver.conf**.  
 
-5. Start **worldserver.exe**. When starting it for the very first time it will attempt to build the MySQL databases. You should be greeted with this screen below:  
+3. Start **worldserver.exe**. When starting it for the very first time it will attempt to build the MySQL databases. You should be greeted with this screen below:  
 
 ![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/worldserver.exe.png?raw=true)
 
@@ -176,16 +176,18 @@ Type **y** every time it asks if you want to create a database (tcc_auth, tcc_ch
 
 When it is done close the window.
 
-6. Start **bnetserver.exe** and **worldserver.exe** and keep them open.
+4. Start **bnetserver.exe** and **worldserver.exe** and keep them open.
 
-7. Now you need to create an account that you will log in into the game with and give yourself server admin privileges.
+5. Now you need to create an account that you will be using to log into the game with + give yourself server admin privileges.
 
-You should have 2 command-line windows open now. Go into the **worldserver.exe** command-line window and type the following:
+You should have 2 command-line windows open now. Go into the **worldserver.exe** command-line window and type the following 2 highlighted commands:
 
-**bnetaccount create yourusername@yourusername yourpassword** (1#1 = accountID#realm)
-**gm set account gmlevel 1#1 3 -1**
+**bnetaccount create yourusername@yourusername yourpassword**  
+**gm set account gmlevel 1#1 3 -1**  
 
-8. You need the Arctium Launcher for 1.14.x clients now.
+For reference: (1#1 = tcc_auth.account.id#tcc_auth.realmlist.id)
+
+6. You need the Arctium Launcher for 1.14.x clients now.
 Copy it into your client where **WowClassic.exe** is and right click drag it and make a shortcut of it.
 Right click the shortcut -> Properties and add the argument   **--version=ClassicEra** next to where it says target.
 
