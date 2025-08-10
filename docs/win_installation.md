@@ -179,13 +179,19 @@ You should have 2 command-line windows open now. Go into the **worldserver.exe**
 
 (for reference: 1#1 = tcc_auth.account.id#tcc_auth.realmlist.id)
 
-6. You need the Arctium Launcher for 1.14.x clients now.
+# Client Setup
+
+ 1. You need the Arctium Launcher for 1.14.x clients now.
 
 Copy it into your client where **WowClassic.exe** is and right click drag it and make a shortcut of it.
 Right click the shortcut -> Properties and add the argument   **--version=ClassicEra** next to where it says target.
 
 It should look like this:
 **"C:\yourWoWfolder\_classic_era_\Arctium WoW Launcher.exe" --version=ClassicEra**
+
+2. Browse to **C:\yourWoWfolder\_classic_era_\WTF** and open **Config.wtf** in a text editor.
+
+Here you'll need to change **SET portal "EU"** to **Set portal 127.0.0.1**
 
 # **Congratulations!** 
 
