@@ -191,7 +191,7 @@ It should look like this:
 
 2. Browse to **C:\yourWoWfolder\_classic_era_\WTF** and open **Config.wtf** in a text editor.
 
-Here you'll need to change **SET portal "EU"** to **Set portal 127.0.0.1**
+Here you'll need to change **SET portal "EU"** to **Set portal "127.0.0.1"**
 
 # **Congratulations!** 
 
