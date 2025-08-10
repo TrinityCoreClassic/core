@@ -45,12 +45,12 @@ In addition, tick these boxes on\off on your new MySQL user that you just made. 
 8. Install Boost. 1.78.0 to 1.84.0 is supported. Make sure you've downloaded the Windows binaries for Visual Studio 22 **boost_1_84_0-msvc-14.3-64.exe**.
 
 After installing it you'll have to add a system variable path pointing towards where you installed it.   
-Settings -> System -> About (bottom) -> Advanced system settings.  
+**Settings** -> **System** -> **About** (bottom) -> **Advanced system settings**.  
 
 ![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/boost.png)
 
 8. Install the latest version of OpenSSL. If you install OpenSSL to the default location **(C:\Program Files\OpenSSL-Win64)** you won't need to set a system variable path as the core will auto-detect it. If not installed to the default location you'll have to add another system variable path pointing towards where you installed it.  
-Settings -> System -> About (bottom) -> Advanced system settings.  
+**Settings** -> **System** -> **About** (bottom) -> **Advanced system settings**.  
 
 ![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/openssl.png?raw=true)
 
@@ -101,7 +101,7 @@ At the top left where it says Debug, change it to Release.
 
 ![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/visual%20studio-compile.png)
 
-To the top right, right click Solution and click Build Solution. How long this takes depends on your CPU, but should not be too long.  
+To the top right, right click Solution and click **Build Solution**. How long this takes depends on your CPU, but should not be too long.  
 
 ![Alt text](https://raw.githubusercontent.com/TrinityCoreClassic/core/refs/heads/vanilla_classic/docs/visualstudio%20-compile2.png)
 
