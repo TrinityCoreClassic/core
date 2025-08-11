@@ -28,93 +28,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <fstream>
 #include <iostream>
-#include <algorithm> // for std::all_of
-#include <cctype>    // for ::isdigit
 
-// ============================================================================
-// Helper: find latest TCC.<prefix>.DDMMYY.sql in sql/base with fallback to
-//         TCC.<prefix>.sql (final version).
-// ============================================================================
-namespace
-{
-    inline std::string FindLatestBaseFileWithFallback(std::string const& prefix)
-    {
-        namespace fs = boost::filesystem;
-
-        fs::path baseDir = BuiltInConfig::GetSourceDirectory() + "/sql/base";
-        if (!fs::exists(baseDir) || !fs::is_directory(baseDir))
-        {
-            TC_LOG_ERROR("sql.updates", "Base directory \"{}\" does not exist!", baseDir.generic_string());
-            return "";
-        }
-
-        // First pass: find latest by DDMMYY (TCC.<prefix>.DDMMYY.sql)
-        fs::path bestFile;
-        int bestVal = -1;
-
-        for (const auto& entry : fs::directory_iterator(baseDir))
-        {
-            if (!fs::is_regular_file(entry.status()))
-                continue;
-
-            std::string name = entry.path().filename().string();
-            std::string needle = "TCC." + prefix + "."; // prefix + dot
-            if (name.rfind(".sql") != name.size() - 4)
-                continue;
-            if (name.find(needle) != 0)
-                continue;
-
-            // Expect DDMMYY at position needle.size()
-            size_t datePos = needle.size();
-            if (name.size() < datePos + 6)
-                continue;
-
-            std::string datePart = name.substr(datePos, 6);
-            if (datePart.size() != 6 || !std::all_of(datePart.begin(), datePart.end(), ::isdigit))
-                continue;
-
-            // Convert DDMMYY -> YYYYMMDD numeric for comparison (assume 20YY)
-            std::string day   = datePart.substr(0, 2);
-            std::string month = datePart.substr(2, 2);
-            std::string year  = datePart.substr(4, 2);
-            std::string sortable = "20" + year + month + day;
-
-            int dateInt = 0;
-            try { dateInt = std::stoi(sortable); }
-            catch (...) { continue; }
-
-            if (dateInt > bestVal)
-            {
-                bestVal = dateInt;
-                bestFile = entry.path();
-            }
-        }
-
-        if (!bestFile.empty())
-        {
-            TC_LOG_INFO("sql.updates", ">> Detected latest {} SQL dump: '{}'", prefix, bestFile.filename().string());
-            return bestFile.generic_string();
-        }
-
-        // Fallback: TCC.<prefix>.sql (final version)
-        fs::path fallback = baseDir / ("TCC." + prefix + ".sql");
-        if (fs::exists(fallback) && fs::is_regular_file(fallback))
-        {
-            TC_LOG_INFO("sql.updates", ">> Falling back to {} SQL dump: '{}'", prefix, fallback.filename().string());
-            return fallback.generic_string();
-        }
-
-        // Nothing found
-        TC_LOG_ERROR("sql.updates",
-                     "No suitable dump found in \"{}\". Looked for 'TCC.{}.<DDMMYY>.sql' then 'TCC.{}.sql'.",
-                     baseDir.generic_string(), prefix, prefix);
-        return "";
-    }
-}
-
-// ============================================================================
-// DBUpdaterUtil
-// ============================================================================
 std::string DBUpdaterUtil::GetCorrectedMySQLExecutable()
 {
     if (!corrected_path().empty())
@@ -131,14 +45,12 @@ bool DBUpdaterUtil::CheckExecutable()
         exe = Trinity::SearchExecutableInPath("mysql");
         if (!exe.empty() && is_regular_file(exe))
         {
-            // Correct the path to the cli
             corrected_path() = absolute(exe).generic_string();
             return true;
         }
 
         TC_LOG_FATAL("sql.updates", "Didn't find any executable MySQL binary at \'{}\' or in path, correct the path in the *.conf (\"MySQLExecutable\").",
             absolute(exe).generic_string());
-
         return false;
     }
     return true;
@@ -150,9 +62,7 @@ std::string& DBUpdaterUtil::corrected_path()
     return path;
 }
 
-// ============================================================================
 // Auth Database
-// ============================================================================
 template<>
 std::string DBUpdater<LoginDatabaseConnection>::GetConfigEntry()
 {
@@ -168,20 +78,16 @@ std::string DBUpdater<LoginDatabaseConnection>::GetTableName()
 template<>
 std::string DBUpdater<LoginDatabaseConnection>::GetBaseFile()
 {
-    // Looks for sql/base/TCC.auth.DDMMYY.sql, then TCC.auth.sql
-    return FindLatestBaseFileWithFallback("auth");
+    return BuiltInConfig::GetSourceDirectory() + "/sql/base/auth_database.sql";
 }
 
 template<>
 bool DBUpdater<LoginDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
-    // This way silences warnings under msvc
     return (updateMask & DatabaseLoader::DATABASE_LOGIN) ? true : false;
 }
 
-// ============================================================================
 // World Database
-// ============================================================================
 template<>
 std::string DBUpdater<WorldDatabaseConnection>::GetConfigEntry()
 {
@@ -197,27 +103,22 @@ std::string DBUpdater<WorldDatabaseConnection>::GetTableName()
 template<>
 std::string DBUpdater<WorldDatabaseConnection>::GetBaseFile()
 {
-    // Looks for sql/base/TCC.world.DDMMYY.sql, then TCC.world.sql
-    return FindLatestBaseFileWithFallback("world");
+    return GitRevision::GetFullDatabase();
 }
 
 template<>
 bool DBUpdater<WorldDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
-    // This way silences warnings under msvc
     return (updateMask & DatabaseLoader::DATABASE_WORLD) ? true : false;
 }
 
-// Force repository style for world too (no GitHub "download" nag)
 template<>
 BaseLocation DBUpdater<WorldDatabaseConnection>::GetBaseLocationType()
 {
-    return LOCATION_REPOSITORY;
+    return LOCATION_DOWNLOAD;
 }
 
-// ============================================================================
 // Character Database
-// ============================================================================
 template<>
 std::string DBUpdater<CharacterDatabaseConnection>::GetConfigEntry()
 {
@@ -233,20 +134,16 @@ std::string DBUpdater<CharacterDatabaseConnection>::GetTableName()
 template<>
 std::string DBUpdater<CharacterDatabaseConnection>::GetBaseFile()
 {
-    // Looks for sql/base/TCC.characters.DDMMYY.sql, then TCC.characters.sql
-    return FindLatestBaseFileWithFallback("characters");
+    return BuiltInConfig::GetSourceDirectory() + "/sql/base/characters_database.sql";
 }
 
 template<>
 bool DBUpdater<CharacterDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
-    // This way silences warnings under msvc
     return (updateMask & DatabaseLoader::DATABASE_CHARACTER) ? true : false;
 }
 
-// ============================================================================
 // Hotfix Database
-// ============================================================================
 template<>
 std::string DBUpdater<HotfixDatabaseConnection>::GetConfigEntry()
 {
@@ -262,27 +159,22 @@ std::string DBUpdater<HotfixDatabaseConnection>::GetTableName()
 template<>
 std::string DBUpdater<HotfixDatabaseConnection>::GetBaseFile()
 {
-    // Looks for sql/base/TCC.hotfixes.DDMMYY.sql, then TCC.hotfixes.sql
-    return FindLatestBaseFileWithFallback("hotfixes");
+    return GitRevision::GetHotfixesDatabase();
 }
 
 template<>
 bool DBUpdater<HotfixDatabaseConnection>::IsEnabled(uint32 const updateMask)
 {
-    // This way silences warnings under msvc
     return (updateMask & DatabaseLoader::DATABASE_HOTFIX) ? true : false;
 }
 
-// Force repository style for hotfixes too
 template<>
 BaseLocation DBUpdater<HotfixDatabaseConnection>::GetBaseLocationType()
 {
-    return LOCATION_REPOSITORY;
+    return LOCATION_DOWNLOAD;
 }
 
-// ============================================================================
 // All (defaults)
-// ============================================================================
 template<class T>
 BaseLocation DBUpdater<T>::GetBaseLocationType()
 {
@@ -302,10 +194,8 @@ bool DBUpdater<T>::Create(DatabaseWorkerPool<T>& pool)
 
     TC_LOG_INFO("sql.updates", "Creating database \"{}\"...", pool.GetConnectionInfo()->database);
 
-    // Path of temp file
     static Path const temp("create_table.sql");
 
-    // Create temporary query to use external MySQL CLi
     std::ofstream file(temp.generic_string());
     if (!file.is_open())
     {
@@ -314,7 +204,6 @@ bool DBUpdater<T>::Create(DatabaseWorkerPool<T>& pool)
     }
 
     file << "CREATE DATABASE `" << pool.GetConnectionInfo()->database << "` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci\n\n";
-
     file.close();
 
     try
@@ -413,8 +302,6 @@ bool DBUpdater<T>::Populate(DatabaseWorkerPool<T>& pool)
             }
             case LOCATION_DOWNLOAD:
             {
-                // We don't expect this path now that everything is repository-based,
-                // but keep it here for compatibility.
                 std::string const filename = base.filename().generic_string();
                 std::string const workdir = boost::filesystem::current_path().generic_string();
                 TC_LOG_ERROR("sql.updates", ">> File \"{}\" is missing, download it from \"https://github.com/TrinityCore/TrinityCore/releases\"" \
@@ -425,7 +312,6 @@ bool DBUpdater<T>::Populate(DatabaseWorkerPool<T>& pool)
         return false;
     }
 
-    // Update database
     TC_LOG_INFO("sql.updates", ">> Applying \'{}\'...", base.generic_string());
     try
     {
@@ -467,75 +353,55 @@ void DBUpdater<T>::ApplyFile(DatabaseWorkerPool<T>& pool, std::string const& hos
     std::vector<std::string> args;
     args.reserve(9);
 
-    // CLI Client connection info
     args.emplace_back("-h" + host);
     args.emplace_back("-u" + user);
 
     if (!password.empty())
         args.emplace_back("-p" + password);
 
-    // Check if we want to connect through ip or socket (Unix only)
 #ifdef _WIN32
-
     if (host == ".")
         args.emplace_back("--protocol=PIPE");
     else
         args.emplace_back("-P" + port_or_socket);
-
 #else
-
     if (!std::isdigit(port_or_socket[0]))
     {
-        // We can't check if host == "." here, because it is named localhost if socket option is enabled
         args.emplace_back("-P0");
         args.emplace_back("--protocol=SOCKET");
         args.emplace_back("-S" + port_or_socket);
     }
     else
-        // generic case
         args.emplace_back("-P" + port_or_socket);
-
 #endif
 
-    // Set the default charset to utf8
     args.emplace_back("--default-character-set=utf8");
-
-    // Set max allowed packet to 1 GB
     args.emplace_back("--max-allowed-packet=1GB");
 
 #if !defined(MARIADB_VERSION_ID) && MYSQL_VERSION_ID >= 80000
-
     if (ssl == "ssl")
         args.emplace_back("--ssl-mode=REQUIRED");
-
 #else
-
     if (ssl == "ssl")
         args.emplace_back("--ssl");
-
 #endif
 
-    // Execute sql file
     args.emplace_back("-e");
     args.emplace_back(Trinity::StringFormat("BEGIN; SOURCE {}; COMMIT;", path.generic_string()));
 
-    // Database
     if (!database.empty())
         args.emplace_back(database);
 
-    // Invokes a mysql process which doesn't leak credentials to logs
-    int const ret = Trinity::StartProcess(DBUpdaterUtil::GetCorrectedMySQLExecutable(), args,
-                                 "sql.updates", "", true);
+    int const ret = Trinity::StartProcess(DBUpdaterUtil::GetCorrectedMySQLExecutable(), args, "sql.updates", "", true);
 
     if (ret != EXIT_SUCCESS)
     {
-        TC_LOG_FATAL("sql.updates", "Applying of file \'{}\' to database \'{}\' failed!" \
+        TC_LOG_FATAL("sql.updates", "Applying of file \'{}\' to database \'{}\' failed!"
             " If you are a user, please pull the latest revision from the repository. "
             "Also make sure you have not applied any of the databases with your sql client. "
             "You cannot use auto-update system and import sql files from TrinityCore repository with your sql client. "
             "If you are a developer, please fix your sql query.",
             path.generic_string(), pool.GetConnectionInfo()->database);
-
         throw UpdateException("update failed");
     }
 }

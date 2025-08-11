@@ -46,9 +46,7 @@ UpdateFetcher::UpdateFetcher(Path const& sourceDirectory,
 {
 }
 
-UpdateFetcher::~UpdateFetcher()
-{
-}
+UpdateFetcher::~UpdateFetcher() = default;
 
 UpdateFetcher::LocaleFileStorage UpdateFetcher::GetFileList() const
 {
@@ -78,13 +76,12 @@ void UpdateFetcher::FillFileListRecursively(Path const& path, LocaleFileStorage&
 
             LocaleFileEntry const entry = { itr->path(), state };
 
-            // Check for doubled filenames
-            // Because elements are only compared by their filenames, this is ok
+            // Unique by filename (ordering is by filename)
             if (storage.find(entry) != storage.end())
             {
-                TC_LOG_FATAL("sql.updates", "Duplicate filename \"{}\" occurred. Because updates are ordered " \
-                    "by their filenames, every name needs to be unique!", itr->path().generic_string());
-
+                TC_LOG_FATAL("sql.updates",
+                    "Duplicate filename \"{}\" occurred. Because updates are ordered by their filenames, every name must be unique!",
+                    itr->path().generic_string());
                 throw UpdateException("Updating failed, see the log for details.");
             }
 
@@ -106,7 +103,7 @@ UpdateFetcher::DirectoryStorage UpdateFetcher::ReceiveIncludedDirectories() cons
         Field* fields = result->Fetch();
 
         std::string path = fields[0].GetString();
-        if (path.substr(0, 1) == "$")
+        if (!path.empty() && path[0] == '$')
             path = _sourceDirectory->generic_string() + path.substr(1);
 
         Path const p(path);
@@ -121,8 +118,8 @@ UpdateFetcher::DirectoryStorage UpdateFetcher::ReceiveIncludedDirectories() cons
         directories.push_back(entry);
 
         TC_LOG_TRACE("sql.updates", "Added applied file \"{}\" from remote.", p.filename().generic_string());
-
-    } while (result->NextRow());
+    }
+    while (result->NextRow());
 
     return directories;
 }
@@ -154,22 +151,15 @@ std::string UpdateFetcher::ReadSQLUpdate(boost::filesystem::path const& file) co
     std::ifstream in(file.c_str());
     if (!in.is_open())
     {
-        TC_LOG_FATAL("sql.updates", "Failed to open the sql update \"{}\" for reading! "
-                     "Stopping the server to keep the database integrity, "
-                     "try to identify and solve the issue or disable the database updater.",
-                     file.generic_string());
-
+        TC_LOG_FATAL("sql.updates",
+            "Failed to open the sql update \"{}\" for reading! Stopping the server to keep the database integrity.",
+            file.generic_string());
         throw UpdateException("Opening the sql update failed!");
     }
 
-    auto update = [&in]  {
-        std::ostringstream ss;
-        ss << in.rdbuf();
-        return ss.str();
-    }();
-
-    in.close();
-    return update;
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    return ss.str();
 }
 
 UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
@@ -183,28 +173,23 @@ UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
     size_t countRecentUpdates = 0;
     size_t countArchivedUpdates = 0;
 
-    // Count updates
     for (auto const& entry : applied)
-        if (entry.second.state == RELEASED)
-            ++countRecentUpdates;
-        else
-            ++countArchivedUpdates;
+        (entry.second.state == RELEASED) ? ++countRecentUpdates : ++countArchivedUpdates;
 
-    // Fill hash to name cache
     HashToFileNameStorage hashToName;
-    for (auto entry : applied)
-        hashToName.insert(std::make_pair(entry.second.hash, entry.first));
+    for (auto const& it : applied)
+        hashToName.emplace(it.second.hash, it.first);
 
     size_t importedUpdates = 0;
 
     for (auto const& availableQuery : available)
     {
-        TC_LOG_DEBUG("sql.updates", "Checking update \"{}\"...", availableQuery.first.filename().generic_string());
+        std::string const fname = availableQuery.first.filename().string();
+        TC_LOG_DEBUG("sql.updates", "Checking update \"{}\"...", fname);
 
-        AppliedFileStorage::const_iterator iter = applied.find(availableQuery.first.filename().string());
+        auto iter = applied.find(fname);
         if (iter != applied.end())
         {
-            // If redundancy is disabled, skip it, because the update is already applied.
             if (!redundancyChecks)
             {
                 TC_LOG_DEBUG("sql.updates", ">> Update is already applied, skipping redundancy checks.");
@@ -212,95 +197,75 @@ UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
                 continue;
             }
 
-            // If the update is in an archived directory and is marked as archived in our database, skip redundancy checks (archived updates never change).
             if (!archivedRedundancy && (iter->second.state == ARCHIVED) && (availableQuery.second == ARCHIVED))
             {
-                TC_LOG_DEBUG("sql.updates", ">> Update is archived and marked as archived in database, skipping redundancy checks.");
+                TC_LOG_DEBUG("sql.updates", ">> Update is archived and marked archived in DB, skipping redundancy checks.");
                 applied.erase(iter);
                 continue;
             }
         }
 
-        // Calculate a Sha1 hash based on query content.
         std::string const hash = ByteArrayToHexStr(Trinity::Crypto::SHA1::GetDigestOf(ReadSQLUpdate(availableQuery.first)));
-
         UpdateMode mode = MODE_APPLY;
 
-        // Update is not in our applied list
         if (iter == applied.end())
         {
-            // Catch renames (different filename, but same hash)
-            HashToFileNameStorage::const_iterator const hashIter = hashToName.find(hash);
+            auto const hashIter = hashToName.find(hash);
             if (hashIter != hashToName.end())
             {
-                // Check if the original file was removed. If not, we've got a problem.
-                LocaleFileStorage::const_iterator localeIter;
-                // Push localeIter forward
-                for (localeIter = available.begin(); (localeIter != available.end()) &&
-                    (localeIter->first.filename().string() != hashIter->second); ++localeIter);
+                bool oldStillExists = false;
+                for (auto const& lf : available)
+                    if (lf.first.filename().string() == hashIter->second) { oldStillExists = true; break; }
 
-                // Conflict!
-                if (localeIter != available.end())
+                if (oldStillExists)
                 {
-                    TC_LOG_WARN("sql.updates", ">> It seems like the update \"{}\" \'{}\' was renamed, but the old file is still there! " \
-                        "Treating it as a new file! (It is probably an unmodified copy of the file \"{}\")",
-                            availableQuery.first.filename().string(), hash.substr(0, 7),
-                                localeIter->first.filename().string());
+                    TC_LOG_WARN("sql.updates",
+                        ">> It seems the update \"{}\" '{}' was renamed, but the old file \"{}\" still exists! Treating it as new.",
+                        fname, hash.substr(0, 7), hashIter->second);
                 }
-                // It is safe to treat the file as renamed here
                 else
                 {
-                    TC_LOG_INFO("sql.updates", ">> Renaming update \"{}\" to \"{}\" \'{}\'.",
-                        hashIter->second, availableQuery.first.filename().string(), hash.substr(0, 7));
-
-                    RenameEntry(hashIter->second, availableQuery.first.filename().string());
+                    TC_LOG_INFO("sql.updates", ">> Renaming update \"{}\" to \"{}\" '{}'.",
+                                hashIter->second, fname, hash.substr(0, 7));
+                    RenameEntry(hashIter->second, fname);
                     applied.erase(hashIter->second);
                     continue;
                 }
             }
-            // Apply the update if it was never seen before.
             else
             {
-                TC_LOG_INFO("sql.updates", ">> Applying update \"{}\" \'{}\'...",
-                    availableQuery.first.filename().string(), hash.substr(0, 7));
+                TC_LOG_INFO("sql.updates", ">> Applying update \"{}\" '{}'", fname, hash.substr(0, 7));
             }
         }
-        // Rehash the update entry if it exists in our database with an empty hash.
         else if (allowRehash && iter->second.hash.empty())
         {
             mode = MODE_REHASH;
-
-            TC_LOG_INFO("sql.updates", ">> Re-hashing update \"{}\" \'{}\'...", availableQuery.first.filename().string(),
-                hash.substr(0, 7));
+            TC_LOG_INFO("sql.updates", ">> Re-hashing update \"{}\" '{}'", fname, hash.substr(0, 7));
         }
         else
         {
-            // If the hash of the files differs from the one stored in our database, reapply the update (because it changed).
             if (iter->second.hash != hash)
             {
-                TC_LOG_INFO("sql.updates", ">> Reapplying update \"{}\" \'{}\' -> \'{}\' (it changed)...", availableQuery.first.filename().string(),
-                    iter->second.hash.substr(0, 7), hash.substr(0, 7));
+                TC_LOG_INFO("sql.updates", ">> Reapplying update \"{}\" '{}' -> '{}' (it changed)...",
+                            fname, iter->second.hash.substr(0, 7), hash.substr(0, 7));
             }
             else
             {
-                // If the file wasn't changed and just moved, update its state (if necessary).
                 if (iter->second.state != availableQuery.second)
                 {
-                    TC_LOG_DEBUG("sql.updates", ">> Updating the state of \"{}\" to \'{}\'...",
-                        availableQuery.first.filename().string(), AppliedFileEntry::StateConvert(availableQuery.second));
-
-                    UpdateState(availableQuery.first.filename().string(), availableQuery.second);
+                    TC_LOG_DEBUG("sql.updates", ">> Updating the state of \"{}\" to '{}'", fname,
+                                 AppliedFileEntry::StateConvert(availableQuery.second));
+                    UpdateState(fname, availableQuery.second);
                 }
 
-                TC_LOG_DEBUG("sql.updates", ">> Update is already applied and matches the hash \'{}\'.", hash.substr(0, 7));
-
+                TC_LOG_DEBUG("sql.updates", ">> Update is already applied and matches hash '{}'.", hash.substr(0, 7));
                 applied.erase(iter);
                 continue;
             }
         }
 
         uint32 speed = 0;
-        AppliedFileEntry const file = { availableQuery.first.filename().string(), hash, availableQuery.second, 0 };
+        AppliedFileEntry const fileEntry = { fname, hash, availableQuery.second, 0 };
 
         switch (mode)
         {
@@ -308,7 +273,7 @@ UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
                 speed = Apply(availableQuery.first);
                 [[fallthrough]];
             case MODE_REHASH:
-                UpdateEntry(file, speed);
+                UpdateEntry(fileEntry, speed);
                 break;
         }
 
@@ -319,27 +284,27 @@ UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
             ++importedUpdates;
     }
 
-    // Cleanup up orphaned entries (if enabled)
     if (!applied.empty())
     {
-        bool const doCleanup = (cleanDeadReferencesMaxCount < 0) || (applied.size() <= static_cast<size_t>(cleanDeadReferencesMaxCount));
+        bool const doCleanup = (cleanDeadReferencesMaxCount < 0)
+                            || (applied.size() <= static_cast<size_t>(cleanDeadReferencesMaxCount));
 
         for (auto const& entry : applied)
         {
-            TC_LOG_WARN("sql.updates", ">> The file \'{}\' was applied to the database, but is missing in" \
-                " your update directory now!", entry.first);
-
+            TC_LOG_WARN("sql.updates",
+                        ">> The file '{}' was applied to the database, but is now missing from your update directory!",
+                        entry.first);
             if (doCleanup)
-                TC_LOG_INFO("sql.updates", "Deleting orphaned entry \'{}\'...", entry.first);
+                TC_LOG_INFO("sql.updates", "Deleting orphaned entry '{}'...", entry.first);
         }
 
         if (doCleanup)
             CleanUp(applied);
         else
-        {
-            TC_LOG_ERROR("sql.updates", "Cleanup is disabled! There were  {} dirty files applied to your database, " \
-                "but they are now missing in your source directory!", applied.size());
-        }
+            TC_LOG_ERROR("sql.updates",
+                         "Cleanup is disabled! There were {} dirty files applied to your database, "
+                         "but they are now missing in your source directory!",
+                         applied.size());
     }
 
     return UpdateResult(importedUpdates, countRecentUpdates, countArchivedUpdates);
@@ -348,43 +313,22 @@ UpdateResult UpdateFetcher::Update(bool const redundancyChecks,
 uint32 UpdateFetcher::Apply(Path const& path) const
 {
     using Time = std::chrono::steady_clock;
-
-    // Benchmark query speed
     auto const begin = Time::now();
-
-    // Update database
     _applyFile(path);
-
-    // Return the time it took the query to apply
     return uint32(std::chrono::duration_cast<std::chrono::milliseconds>(Time::now() - begin).count());
 }
 
 void UpdateFetcher::UpdateEntry(AppliedFileEntry const& entry, uint32 const speed) const
 {
-    std::string const update = "REPLACE INTO `updates` (`name`, `hash`, `state`, `speed`) VALUES (\"" +
-        entry.name + "\", \"" + entry.hash + "\", \'" + entry.GetStateAsString() + "\', " + std::to_string(speed) + ")";
-
-    // Update database
+    std::string const update = "REPLACE INTO `updates` (`name`, `hash`, `state`, `speed`) VALUES (\""
+        + entry.name + "\", \"" + entry.hash + "\", '" + entry.GetStateAsString() + "', " + std::to_string(speed) + ")";
     _apply(update);
 }
 
 void UpdateFetcher::RenameEntry(std::string const& from, std::string const& to) const
 {
-    // Delete the target if it exists
-    {
-        std::string const update = "DELETE FROM `updates` WHERE `name`=\"" + to + "\"";
-
-        // Update database
-        _apply(update);
-    }
-
-    // Rename
-    {
-        std::string const update = "UPDATE `updates` SET `name`=\"" + to + "\" WHERE `name`=\"" + from + "\"";
-
-        // Update database
-        _apply(update);
-    }
+    _apply("DELETE FROM `updates` WHERE `name`=\"" + to + "\"");
+    _apply("UPDATE `updates` SET `name`=\"" + to + "\" WHERE `name`=\"" + from + "\"");
 }
 
 void UpdateFetcher::CleanUp(AppliedFileStorage const& storage) const
@@ -392,32 +336,25 @@ void UpdateFetcher::CleanUp(AppliedFileStorage const& storage) const
     if (storage.empty())
         return;
 
-    std::stringstream update;
+    std::stringstream ss;
+    ss << "DELETE FROM `updates` WHERE `name` IN(";
     size_t remaining = storage.size();
-
-    update << "DELETE FROM `updates` WHERE `name` IN(";
-
     for (auto const& entry : storage)
     {
-        update << "\"" << entry.first << "\"";
+        ss << "\"" << entry.first << "\"";
         if ((--remaining) > 0)
-            update << ", ";
+            ss << ", ";
     }
-
-    update << ")";
-
-    // Update database
-    _apply(update.str());
+    ss << ")";
+    _apply(ss.str());
 }
 
 void UpdateFetcher::UpdateState(std::string const& name, State const state) const
 {
-    std::string const update = "UPDATE `updates` SET `state`=\'" + AppliedFileEntry::StateConvert(state) + "\' WHERE `name`=\"" + name + "\"";
-
-    // Update database
-    _apply(update);
+    _apply("UPDATE `updates` SET `state`='" + AppliedFileEntry::StateConvert(state) + "' WHERE `name`=\"" + name + "\"");
 }
 
+// Compare by filename ONLY (keeps duplicate detection semantics)
 bool UpdateFetcher::PathCompare::operator()(LocaleFileEntry const& left, LocaleFileEntry const& right) const
 {
     return left.first.filename().string() < right.first.filename().string();
