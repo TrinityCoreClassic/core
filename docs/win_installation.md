@@ -68,7 +68,11 @@ If your command-line prompt window looks like the picture below, you're ready to
 
 ![Alt text](https://github.com/TrinityCoreClassic/core/blob/vanilla_classic/docs/cloning.png?raw=true)
 
-Now type **git clone --branch vanilla_classic --single-branch https://github.com/TrinityCoreClassic/core.git** and hit enter and wait.   
+Now type:  
+
+**git clone --branch vanilla_classic --single-branch https://github.com/TrinityCoreClassic/core.git**  
+
+Hit enter and wait.   
 
 When it is done cloning there will be a subfolder named **core** in **C:\TrinityCoreClassic**. This is where the core is.  
 
@@ -136,7 +140,7 @@ Move those to where you compiled your core **C:\TrinityCoreClassic\build\bin\Rel
 1. Browse to **C:\Program Files\MySQL\MySQL Server 8.0\lib** and copy the following file to where you compiled the core **C:\TrinityCoreClassic\build\bin\Release**:
 - **libmysql.dll**
 
-2. Go to **https://github.com/TrinityCoreClassic/core/releases** and download the latest **TCC.world.xxxx.sql** release and extract the sql file to **C:\TrinityCoreLassic\sql\base**.  
+2. Go to **https://github.com/TrinityCoreClassic/core/releases** and download the latest **TCC_world_YYYY_MM_DD.sql** and **TCC_hotfixes_YY_MM_DD.sql** release and extract the sql files to where you compiled the core **C:\TrinityCoreLassic\build\bin\Release**.  
 
 # Server setup
 
