@@ -1,0 +1,140 @@
+name: Windows
+
+on:
+  push:
+    branches: [ main, vanilla_classic ]
+  pull_request:
+    branches: [ main, vanilla_classic ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [default, release, debug]
+        
+    name: Windows-${{ matrix.preset }}
+    
+    env:
+      BOOST_ROOT: ${{ github.workspace }}\deps\boost
+      OPENSSL_ROOT_DIR: C:\Program Files\OpenSSL
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Cache Boost
+      uses: actions/cache@v4
+      id: cache-boost
+      with:
+        path: ${{ env.BOOST_ROOT }}
+        key: ${{ runner.os }}-boost-1.83.0
+
+    - name: Download and Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        Write-Host "Downloading Boost..."
+        $Url = "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip"
+        (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.zip")
+        Write-Host "Extracting Boost..."
+        Expand-Archive -Path "$env:TEMP\boost.zip" -DestinationPath "${{ github.workspace }}\deps" -Force
+        Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
+
+    - name: Install OpenSSL
+      run: |
+        choco install openssl --version=3.1.4 -y --no-progress
+        echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL" >> $env:GITHUB_ENV
+
+    - name: Install MySQL
+      run: |
+        choco install mysql --version=8.0.31 -y --no-progress
+        echo "MYSQL_ROOT_DIR=C:\tools\mysql\current" >> $env:GITHUB_ENV
+        echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
+
+    - name: Configure CMake
+      run: |
+        cmake --preset ${{ matrix.preset }}
+
+    - name: Build
+      run: |
+        cmake --build --preset ${{ matrix.preset }} --parallel
+
+    - name: Test
+      if: matrix.preset == 'debug'
+      run: |
+        cd build/${{ matrix.preset }}
+        ctest --output-on-failure --parallel 2
+
+    - name: Install
+      run: |
+        cmake --install build/${{ matrix.preset }}
+
+    - name: Check executables
+      shell: powershell
+      run: |
+        # Check default install location based on preset
+        if ("${{ matrix.preset }}" -eq "default" -or "${{ matrix.preset }}" -eq "debug" -or "${{ matrix.preset }}" -eq "release") {
+          $binPath = "C:\opt\trinity-core\vanilla-classic\bin"
+        } else {
+          $binPath = "C:\Program Files\TrinityCore\bin"
+        }
+        
+        if (Test-Path "$binPath\worldserver.exe") {
+          & "$binPath\worldserver.exe" --version
+        } else {
+          Write-Host "worldserver.exe not found at $binPath"
+          if (Test-Path $binPath) {
+            Get-ChildItem $binPath
+          } else {
+            Write-Host "Directory does not exist"
+          }
+        }
+        
+        if (Test-Path "$binPath\bnetserver.exe") {
+          & "$binPath\bnetserver.exe" --version
+        } else {
+          Write-Host "bnetserver.exe not found at $binPath"
+        }
+
+    - name: Create Release Package
+      if: matrix.preset == 'release' && github.event_name == 'push'
+      run: |
+        $installPath = "C:\opt\trinity-core\vanilla-classic"
+        $binPath = "$installPath\bin"
+        if (Test-Path $installPath) {
+          # Copy runtime dependencies
+          Copy-Item "$env:MYSQL_ROOT_DIR\lib\libmysql.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          
+          # Create package with symbols
+          7z a "TrinityCore-Win64-release.zip" "$installPath\*"
+          
+          # Create package without symbols
+          Remove-Item "$binPath\*.pdb" -Force -ErrorAction SilentlyContinue
+          7z a "TrinityCore-Win64-release-NoSymbols.zip" "$installPath\*"
+        }
+
+    - name: Upload Release Artifacts
+      if: matrix.preset == 'release' && github.event_name == 'push'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-release-${{ matrix.preset }}
+        path: |
+          TrinityCore-Win64-*.zip
+        retention-days: 30
+
+    - name: Upload Build Logs on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build-logs-${{ matrix.preset }}
+        path: |
+          build/${{ matrix.preset }}/CMakeFiles/CMakeOutput.log
+          build/${{ matrix.preset }}/CMakeFiles/CMakeError.log
+        retention-days: 7

@@ -8,7 +8,7 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.28)
 
 # Add module paths BEFORE project() to override FindOpenSSL.cmake early
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/macros")
@@ -17,8 +17,21 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/macros")
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
-# Set projectname (must be done AFTER setting configurationtypes)
-project(TrinityCore)
+# Enable better error messages for debugging
+set(CMAKE_MESSAGE_CONTEXT_SHOW ON CACHE BOOL "Show message context")
+list(APPEND CMAKE_MESSAGE_CONTEXT "TrinityCore")
+
+# Set up dependency provider (must be done before project())
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+  set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_SOURCE_DIR}/cmake/DependencyProvider.cmake")
+endif()
+
+# Set projectname with version information
+project(TrinityCore
+  VERSION 1.14.0
+  DESCRIPTION "TrinityCore Classic - MMORPG Framework"
+  HOMEPAGE_URL "https://www.trinitycore.org"
+  LANGUAGES CXX C)
 
 if(POLICY CMP0144)
   cmake_policy(SET CMP0144 NEW) # find_package() uses upper-case <PACKAGENAME>_ROOT variables
@@ -34,6 +47,11 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH 0)
 list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH 1)
 
+# set macro-directory
+list(APPEND CMAKE_MODULE_PATH
+  "${CMAKE_SOURCE_DIR}/cmake/macros"
+  "${CMAKE_SOURCE_DIR}/cmake")
+
 # build in Release-mode by default if not explicitly set
 if(CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
   set(CMAKE_DEFAULT_BUILD_TYPE "RelWithDebInfo" CACHE INTERNAL "")
@@ -42,12 +60,26 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif()
 
+# Enable compile commands for better IDE support
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Enable color diagnostics
+set(CMAKE_COLOR_DIAGNOSTICS ON)
+
+# Optimize build dependencies
+set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
+
 include(CheckCXXSourceRuns)
 include(CheckIncludeFiles)
 include(ConfigureScripts)
 
 # set default buildoptions and print them
 include(cmake/options.cmake)
+
+# Include modern CMake helpers
+include(ModernHelpers)
+include(CompilerSettings)
+include(Dependencies)
 
 # turn off PCH totally if enabled (hidden setting, mainly for devs)
 if(NOPCH)
@@ -68,7 +100,7 @@ if(NOT WITHOUT_GIT)
 endif()
 
 # find mysql client binary (needed by genrev)
-find_package(MySQL OPTIONAL_COMPONENTS binary)
+find_package(MySQL REQUIRED COMPONENTS lib OPTIONAL_COMPONENTS binary)
 
 # Find revision ID and hash of the sourcetree
 include(cmake/genrev.cmake)
@@ -76,50 +108,8 @@ include(cmake/genrev.cmake)
 # print out the results before continuing
 include(cmake/showoptions.cmake)
 
-# --- Begin final OpenSSL detection ---
-if (WIN32)
-    set(_OPENSSL_HINTS "")
-
-    # 1. Add OPENSSL_ROOT_DIR env var if it's set
-    if(DEFINED ENV{OPENSSL_ROOT_DIR})
-        list(APPEND _OPENSSL_HINTS "$ENV{OPENSSL_ROOT_DIR}")
-    endif()
-
-    # 2. Add standard install locations
-    if (DEFINED ENV{ProgramFiles})
-        list(APPEND _OPENSSL_HINTS
-            "$ENV{ProgramFiles}/OpenSSL-Win64"
-            "$ENV{ProgramFiles}/OpenSSL-Win32")
-    endif()
-
-    # 3. Try detection
-    set(_OPENSSL_FOUND FALSE)
-    foreach(_path IN LISTS _OPENSSL_HINTS)
-        if (EXISTS "${_path}/lib/VC/x64/MD/libssl.lib")
-            message(STATUS "Auto-detected OpenSSL at: ${_path}")
-            set(OPENSSL_ROOT_DIR "${_path}" CACHE PATH "OpenSSL root directory" FORCE)
-            set(OPENSSL_INCLUDE_DIR "${_path}/include" CACHE PATH "OpenSSL include directory" FORCE)
-            set(OPENSSL_SSL_LIBRARY "${_path}/lib/VC/x64/MD/libssl.lib" CACHE FILEPATH "SSL library" FORCE)
-            set(OPENSSL_CRYPTO_LIBRARY "${_path}/lib/VC/x64/MD/libcrypto.lib" CACHE FILEPATH "Crypto library" FORCE)
-            set(_OPENSSL_FOUND TRUE)
-            break()
-        endif()
-    endforeach()
-
-    # 4. Fail if not found
-    if (NOT _OPENSSL_FOUND)
-        message(FATAL_ERROR
-  "Could not find OpenSSL!\n"
-  "Install OpenSSL, set the OPENSSL_ROOT_DIR environment variable or install to a standard location: C:/Program Files/OpenSSL-Win64\.n"
-  "Then:"
-  "\n"
-  "  - Delete CMake cache.\n"
-  "  - Clear build output directory.\n"
-  "  - Restart CMake and configure again."
-)
-    endif()
-endif()
-# --- End final OpenSSL detection ---
+# Resolve all dependencies
+trinity_resolve_dependencies()
 
 # add dependencies
 add_subdirectory(dep)
@@ -129,11 +119,10 @@ add_subdirectory(src)
 
 include(CTest)
 if(BUILD_TESTING)
-  list(APPEND CMAKE_MODULE_PATH
-    "${Catch2_SOURCE_DIR}/contrib")
-  include(Catch)
-
-  add_subdirectory(tests)
+  # The test directory will handle Catch2 setup
+  if(EXISTS "${CMAKE_SOURCE_DIR}/tests")
+    add_subdirectory(tests)
+  endif()
 
   # Catch cmakefile messes with our settings we explicitly leave up to the user
   # restore user preference
@@ -142,3 +131,5 @@ if(BUILD_TESTING)
   endif()
 endif()
 
+# Include packaging configuration
+include(Packaging)

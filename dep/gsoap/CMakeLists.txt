@@ -20,7 +20,8 @@ target_include_directories(gsoap
 
 target_compile_definitions(gsoap
   PUBLIC
-    -DWITH_OPENSSL)
+    -DWITH_OPENSSL
+    -DWITH_NO_C_LOCALE)
 
 target_link_libraries(gsoap
   PRIVATE
