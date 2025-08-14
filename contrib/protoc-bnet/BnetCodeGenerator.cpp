@@ -14,7 +14,7 @@
 bool BnetCodeGenerator::Generate(pb::FileDescriptor const* file, std::string const& parameter,
                                  pbc::GeneratorContext* generator_context, std::string* error) const
 {
-    std::vector<std::pair<std::string, std::string>> options;
+    std::vector<std::pair<std::string, std::string> > options;
     google::protobuf::compiler::ParseGeneratorParameter(parameter, &options);
 
     // -----------------------------------------------------------------

@@ -1,0 +1,10 @@
+--- a/src/google/protobuf/stubs/stringprintf.cc
++++ b/src/google/protobuf/stubs/stringprintf.cc
+@@ -32,6 +32,7 @@
+ // from google3/base/stringprintf.cc
+ 
+ #include <google/protobuf/stubs/stringprintf.h>
++#include "va_copy_fix.h"
+ 
+ #include <errno.h>
+ #include <stdarg.h> // For va_list and related operations

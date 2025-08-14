@@ -45,6 +45,12 @@ else()
   message("* Build unit tests       : No (default)")
 endif()
 
+if(WITH_PROTO_GENERATION)
+  message("* Generate proto files   : Yes")
+else()
+  message("* Generate proto files   : No (default - using pre-generated)")
+endif()
+
 if(USE_COREPCH)
   message("* Build core w/PCH       : Yes (default)")
 else()

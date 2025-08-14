@@ -1,0 +1,353 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON",
+        "CMAKE_OPTIMIZE_DEPENDENCIES": "ON",
+        "WITH_WARNINGS": "OFF",
+        "WITH_COREDEBUG": "OFF",
+        "BUILD_TESTING": "OFF"
+      }
+    },
+    {
+      "name": "default",
+      "displayName": "Default Config (RelWithDebInfo)",
+      "description": "Default build configuration with dynamic linking",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_INSTALL_PREFIX": "/opt/trinity-core/vanilla-classic",
+        "SERVERS": "ON",
+        "SCRIPTS": "dynamic",
+        "TOOLS": "ON",
+        "USE_SCRIPTPCH": "OFF",
+        "USE_COREPCH": "OFF",
+        "WITH_DYNAMIC_LINKING": "ON",
+        "WITH_STRICT_DATABASE_TYPE_CHECKS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build with all debugging features enabled",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "/opt/trinity-core/vanilla-classic-debug",
+        "SERVERS": "ON",
+        "SCRIPTS": "dynamic",
+        "TOOLS": "ON",
+        "USE_SCRIPTPCH": "OFF",
+        "USE_COREPCH": "OFF",
+        "WITH_WARNINGS": "ON",
+        "WITH_COREDEBUG": "ON",
+        "WITH_DYNAMIC_LINKING": "ON",
+        "WITH_STRICT_DATABASE_TYPE_CHECKS": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Optimized release build",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "/opt/trinity-core/vanilla-classic",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+        "SERVERS": "ON",
+        "SCRIPTS": "static",
+        "TOOLS": "ON",
+        "USE_SCRIPTPCH": "ON",
+        "USE_COREPCH": "ON",
+        "WITH_DYNAMIC_LINKING": "OFF",
+        "WITH_STRICT_DATABASE_TYPE_CHECKS": "ON"
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "Developer",
+      "description": "Developer build with all warnings and tools",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "OFF",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_UNITY_BUILD": "OFF",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/dev"
+      }
+    },
+    {
+      "name": "minimal",
+      "displayName": "Minimal",
+      "description": "Minimal build for testing",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "SERVERS": "ON",
+        "SCRIPTS": "minimal-static",
+        "TOOLS": "OFF",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "Address Sanitizer",
+      "description": "Debug build with Address Sanitizer",
+      "inherits": "debug",
+      "cacheVariables": {
+        "ASAN": "ON",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_C_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "Thread Sanitizer",
+      "description": "Debug build with Thread Sanitizer",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
+        "CMAKE_C_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=thread"
+      }
+    },
+    {
+      "name": "unity",
+      "displayName": "Unity Build",
+      "description": "Build with Unity build for faster compilation",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_UNITY_BUILD": "ON",
+        "CMAKE_UNITY_BUILD_BATCH_SIZE": "16"
+      }
+    },
+    {
+      "name": "static",
+      "displayName": "Static Build",
+      "description": "Fully static build",
+      "inherits": "default",
+      "cacheVariables": {
+        "SCRIPTS": "static",
+        "WITH_DYNAMIC_LINKING": "OFF",
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "CI Build",
+      "description": "Configuration for continuous integration",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "SERVERS": "ON",
+        "SCRIPTS": "static",
+        "TOOLS": "ON",
+        "BUILD_TESTING": "ON",
+        "WITH_WARNINGS": "ON",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
+      }
+    },
+    {
+      "name": "fast",
+      "displayName": "Fast Development Build",
+      "description": "Fast development build with optimizations for build speed",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_UNITY_BUILD": "ON",
+        "CMAKE_UNITY_BUILD_BATCH_SIZE": "32",
+        "USE_SCRIPTPCH": "ON",
+        "USE_COREPCH": "ON",
+        "SCRIPTS": "dynamic",
+        "TOOLS": "OFF",
+        "WITH_WARNINGS": "OFF",
+        "USE_CCACHE": "ON"
+      }
+    },
+    {
+      "name": "portable",
+      "displayName": "Portable Build",
+      "description": "Build optimized for portability across different systems",
+      "inherits": "release",
+      "cacheVariables": {
+        "TRINITY_CPU_TARGET": "x86-64",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF"
+      }
+    },
+    {
+      "name": "server-only",
+      "displayName": "Server Only",
+      "description": "Build only servers, no tools",
+      "inherits": "default",
+      "cacheVariables": {
+        "SERVERS": "ON",
+        "TOOLS": "OFF",
+        "SCRIPTS": "static"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "displayName": "Default Build",
+      "description": "Default build configuration"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "displayName": "Debug Build",
+      "description": "Debug build configuration"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "displayName": "Release Build",
+      "description": "Release build configuration"
+    },
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "displayName": "Developer Build",
+      "description": "Developer build configuration"
+    },
+    {
+      "name": "dev-verbose",
+      "inherits": "dev",
+      "verbose": true
+    },
+    {
+      "name": "minimal",
+      "configurePreset": "minimal",
+      "displayName": "Minimal Build",
+      "description": "Minimal build configuration"
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "displayName": "CI Build",
+      "description": "CI build configuration"
+    },
+    {
+      "name": "fast",
+      "configurePreset": "fast",
+      "displayName": "Fast Development Build",
+      "description": "Fast development build configuration"
+    },
+    {
+      "name": "portable",
+      "configurePreset": "portable",
+      "displayName": "Portable Build",
+      "description": "Portable build configuration"
+    },
+    {
+      "name": "server-only",
+      "configurePreset": "server-only",
+      "displayName": "Server Only Build",
+      "description": "Server only build configuration"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
+      }
+    },
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "inherits": "base",
+      "displayName": "Default Tests"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "inherits": "base",
+      "displayName": "Debug Tests"
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "inherits": "base",
+      "displayName": "CI Tests",
+      "execution": {
+        "jobs": 4,
+        "timeout": 300
+      }
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "default",
+      "configurePreset": "release",
+      "generators": [
+        "TGZ",
+        "ZIP"
+      ],
+      "packageDirectory": "${sourceDir}/packages",
+      "vendorName": "TrinityCore"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "default",
+      "displayName": "Default Workflow",
+      "description": "Configure, build, and test with default settings",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "default"
+        },
+        {
+          "type": "test",
+          "name": "default"
+        }
+      ]
+    },
+    {
+      "name": "ci",
+      "displayName": "CI Workflow",
+      "description": "Complete CI workflow",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci"
+        },
+        {
+          "type": "build",
+          "name": "ci"
+        },
+        {
+          "type": "test",
+          "name": "ci"
+        }
+      ]
+    }
+  ]
+}
