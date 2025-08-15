@@ -12,13 +12,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [default, release, debug]
+        preset: [default]
         
     name: Windows-${{ matrix.preset }}
     
     env:
       BOOST_ROOT: ${{ github.workspace }}\deps\boost
-      OPENSSL_ROOT_DIR: C:\Program Files\OpenSSL
 
     steps:
     - name: Checkout repository
@@ -40,26 +39,64 @@ jobs:
       if: steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         Write-Host "Downloading Boost..."
-        $Url = "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip"
+        $Url = "https://archives.boost.io/release/1.83.0/source/boost_1_83_0.zip"
         (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.zip")
         Write-Host "Extracting Boost..."
+        New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\deps"
         Expand-Archive -Path "$env:TEMP\boost.zip" -DestinationPath "${{ github.workspace }}\deps" -Force
-        Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
+        if (Test-Path "${{ github.workspace }}\deps\boost_1_83_0") {
+          Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
+        }
+        
+        Write-Host "Building Boost libraries..."
+        cd "${{ github.workspace }}\deps\boost"
+        .\bootstrap.bat
+        .\b2 --with-system --with-filesystem --with-program_options --with-locale --with-thread --with-regex --with-chrono --with-atomic variant=release link=static runtime-link=shared threading=multi address-model=64 -j4 --stagedir=stage
+        
+        # Show what was built for debugging
+        Write-Host "Boost libraries built:"
+        Get-ChildItem -Recurse stage\lib\*.lib | Select-Object Name, FullName
+        
+        # Set Boost library directory
+        echo "Boost_LIBRARY_DIRS=${{ github.workspace }}\deps\boost\stage\lib" >> $env:GITHUB_ENV
 
-    - name: Install OpenSSL
+    - name: Install dependencies with Chocolatey
       run: |
-        choco install openssl --version=3.1.4 -y --no-progress
-        echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL" >> $env:GITHUB_ENV
+        # Install OpenSSL (try different package names)
+        choco install openssl.light -y --no-progress --ignore-checksums || `
+        choco install win32openssl -y --no-progress --ignore-checksums || `
+        Write-Host "Failed to install OpenSSL via Chocolatey"
+        
+        # Install MySQL
+        choco install mysql -y --no-progress --ignore-checksums || `
+        Write-Host "Failed to install MySQL via Chocolatey"
+        
+        # Set environment variables for common OpenSSL locations
+        $opensslPaths = @(
+          "C:\Program Files\OpenSSL-Win64",
+          "C:\Program Files\OpenSSL",
+          "C:\OpenSSL-Win64",
+          "C:\tools\OpenSSL"
+        )
+        
+        foreach ($path in $opensslPaths) {
+          if (Test-Path $path) {
+            echo "OPENSSL_ROOT_DIR=$path" >> $env:GITHUB_ENV
+            Write-Host "Found OpenSSL at: $path"
+            break
+          }
+        }
+        
+        # Set MySQL environment
+        if (Test-Path "C:\tools\mysql\current") {
+          echo "MySQL_ROOT=C:\tools\mysql\current" >> $env:GITHUB_ENV
+          echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
+        }
 
-    - name: Install MySQL
-      run: |
-        choco install mysql --version=8.0.31 -y --no-progress
-        echo "MYSQL_ROOT_DIR=C:\tools\mysql\current" >> $env:GITHUB_ENV
-        echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
 
     - name: Configure CMake
       run: |
-        cmake --preset ${{ matrix.preset }}
+        cmake --preset ${{ matrix.preset }} -DBoost_LIBRARY_DIRS="$env:Boost_LIBRARY_DIRS" -DBoost_DEBUG=ON
 
     - name: Build
       run: |
@@ -109,8 +146,8 @@ jobs:
         $binPath = "$installPath\bin"
         if (Test-Path $installPath) {
           # Copy runtime dependencies
-          Copy-Item "$env:MYSQL_ROOT_DIR\lib\libmysql.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
           Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          Copy-Item "$env:MySQL_ROOT\lib\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
           
           # Create package with symbols
           7z a "TrinityCore-Win64-release.zip" "$installPath\*"

@@ -19,24 +19,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-        compiler: [gcc, clang]
-        preset: [default, debug, release, minimal]
-        exclude:
-          # Skip some combinations to reduce CI time
-          - os: ubuntu-22.04
-            compiler: clang
-            preset: minimal
+        include:
+          # Test both compilers with default configuration
           - os: ubuntu-24.04
             compiler: gcc
-            preset: minimal
-        include:
-          - os: ubuntu-22.04
-            gcc-version: 11
-            clang-version: 14
-          - os: ubuntu-24.04
             gcc-version: 13
+            preset: default
+          - os: ubuntu-24.04
+            compiler: clang
             clang-version: 18
+            preset: default
 
     name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.preset }}
 

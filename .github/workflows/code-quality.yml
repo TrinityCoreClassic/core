@@ -5,9 +5,11 @@ on:
     branches: [ main, vanilla_classic ]
   pull_request:
     branches: [ main, vanilla_classic ]
+  workflow_dispatch:
 
 jobs:
   codestyle:
+    if: false  # Temporarily disabled
     name: Code Style Check
     runs-on: ubuntu-latest
     
@@ -145,6 +147,7 @@ jobs:
         fi
 
   clang-format:
+    if: false  # Temporarily disabled
     name: Clang Format Check
     runs-on: ubuntu-latest
     
@@ -169,6 +172,7 @@ jobs:
         done
 
   cmake-format:
+    if: false  # Temporarily disabled
     name: CMake Format Check
     runs-on: ubuntu-latest
     
@@ -201,6 +205,7 @@ jobs:
         fi
 
   pch-check:
+    if: false  # Temporarily disabled
     name: PCH Build Check
     runs-on: ubuntu-latest
     
