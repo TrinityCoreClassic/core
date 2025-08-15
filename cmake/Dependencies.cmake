@@ -32,6 +32,11 @@ set(TRINITY_PROTOBUF_VERSION "2.6.1")
 
 # Boost configuration
 function(trinity_find_boost)
+  # Handle CMake 3.30+ policy for FindBoost removal
+  if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+  endif()
+  
   set(Boost_NO_WARN_NEW_VERSIONS ON)
   
   if(WIN32)
@@ -55,8 +60,22 @@ function(trinity_find_boost)
   # Create modern target
   if(NOT TARGET Trinity::Boost)
     add_library(Trinity::Boost INTERFACE IMPORTED)
+    
+    # Handle Boost libraries properly - filter out link keywords
+    set(_boost_libs_filtered)
+    set(_skip_next FALSE)
+    foreach(_lib ${Boost_LIBRARIES})
+      if(_skip_next)
+        set(_skip_next FALSE)
+      elseif(_lib STREQUAL "optimized" OR _lib STREQUAL "debug")
+        set(_skip_next TRUE)
+      else()
+        list(APPEND _boost_libs_filtered ${_lib})
+      endif()
+    endforeach()
+    
     set_target_properties(Trinity::Boost PROPERTIES
-      INTERFACE_LINK_LIBRARIES "${Boost_LIBRARIES}"
+      INTERFACE_LINK_LIBRARIES "${_boost_libs_filtered}"
       INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}"
       INTERFACE_COMPILE_DEFINITIONS "BOOST_ALL_NO_LIB;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE"
     )
@@ -83,10 +102,12 @@ function(trinity_find_openssl)
       )
     endif()
     
-    if(DEFINED ENV{ProgramFiles(x86)})
+    # Handle ProgramFiles(x86) environment variable with parentheses
+    set(_progfiles_x86 "ProgramFiles(x86)")
+    if(DEFINED ENV{${_progfiles_x86}})
       list(APPEND _OPENSSL_HINTS
-        "$ENV{ProgramFiles(x86)}/OpenSSL-Win32"
-        "$ENV{ProgramFiles(x86)}/OpenSSL"
+        "$ENV{${_progfiles_x86}}/OpenSSL-Win32"
+        "$ENV{${_progfiles_x86}}/OpenSSL"
       )
     endif()
     
@@ -450,14 +471,60 @@ function(trinity_find_catch2)
   include(Catch)
 endfunction()
 
+# Thread library - handle macOS CMake 4.x issue
+if(APPLE)
+  # Set threading variables before any find_package(Threads) calls
+  # This prevents issues with CMake 4.x on macOS
+  set(CMAKE_THREAD_LIBS_INIT "")
+  set(CMAKE_HAVE_THREADS_LIBRARY 1)
+  set(CMAKE_USE_WIN32_THREADS_INIT 0)
+  set(CMAKE_USE_PTHREADS_INIT 1)
+  set(CMAKE_HP_PTHREADS_INIT 0)
+  set(CMAKE_USE_SPROC_INIT 0)
+  set(THREADS_FOUND TRUE)
+  set(Threads_FOUND TRUE)
+  
+  # Create a fake Threads::Threads target to satisfy dependencies
+  if(NOT TARGET Threads::Threads)
+    add_library(Threads::Threads INTERFACE IMPORTED)
+    set_target_properties(Threads::Threads PROPERTIES
+      INTERFACE_COMPILE_OPTIONS "-pthread"
+    )
+  endif()
+  
+  message(STATUS "Pre-configured threading for macOS CMake 4.x compatibility")
+endif()
+
 # Thread library
 function(trinity_find_threads)
   set(CMAKE_THREAD_PREFER_PTHREAD ON)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
+  
+  # On macOS, we've already set up threading above
+  if(APPLE)
+    if(NOT TARGET Trinity::Threads)
+      add_library(Trinity::Threads ALIAS Threads::Threads)
+    endif()
+    message(STATUS "Using pre-configured macOS threading support")
+    return()
+  endif()
+  
+  # For other platforms, use standard FindThreads
   find_package(Threads REQUIRED)
   
+  # Create the Trinity::Threads alias
   if(NOT TARGET Trinity::Threads)
-    add_library(Trinity::Threads ALIAS Threads::Threads)
+    if(TARGET Threads::Threads)
+      add_library(Trinity::Threads ALIAS Threads::Threads)
+    else()
+      # Fallback for systems where Threads::Threads isn't created
+      add_library(Trinity::Threads INTERFACE IMPORTED)
+      if(CMAKE_THREAD_LIBS_INIT)
+        set_target_properties(Trinity::Threads PROPERTIES
+          INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}"
+        )
+      endif()
+    endif()
   endif()
 endfunction()
 

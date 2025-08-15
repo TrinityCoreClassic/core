@@ -1,3 +1,8 @@
+# Handle CMake 4.x compatibility for deprecated commands
+if(POLICY CMP0153)
+  cmake_policy(SET CMP0153 OLD) # Allow exec_program for compatibility
+endif()
+
 if (BUILD_SHARED_LIBS)
   set(SRCS
     src/efsw/Debug.cpp
