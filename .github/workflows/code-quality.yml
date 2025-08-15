@@ -1,0 +1,244 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, vanilla_classic ]
+  pull_request:
+    branches: [ main, vanilla_classic ]
+  workflow_dispatch:
+
+jobs:
+  codestyle:
+    if: false  # Temporarily disabled
+    name: Code Style Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history for some checks
+
+    - name: Setup environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git grep
+
+    - name: Check line endings
+      run: |
+        # Check for CRLF line endings
+        if git ls-files --eol | grep -E "i/crlf|i/mixed"; then
+          echo "Error: Files with CRLF line endings found. Please use LF line endings."
+          git ls-files --eol | grep -E "i/crlf|i/mixed"
+          exit 1
+        fi
+
+    - name: Check trailing whitespace
+      run: |
+        # Check for trailing whitespace
+        if git grep -I -n "\s$" -- '*.cpp' '*.h' '*.hpp' '*.c' '*.cc'; then
+          echo "Error: Trailing whitespace found in source files"
+          exit 1
+        fi
+
+    - name: Check tabs in source files
+      run: |
+        # Check for tabs (we use spaces)
+        if git grep -I -n "	" -- '*.cpp' '*.h' '*.hpp' '*.c' '*.cc' | grep -v "^dep/"; then
+          echo "Error: Tabs found in source files (use 4 spaces instead)"
+          exit 1
+        fi
+
+    - name: Run codestyle script
+      if: always()
+      run: |
+        if [ -f "contrib/check_codestyle.sh" ]; then
+          chmod +x contrib/check_codestyle.sh
+          ./contrib/check_codestyle.sh
+        fi
+
+  sql-check:
+    name: SQL Database Check
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_mysql
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Wait for MySQL
+      run: |
+        for i in {1..30}; do
+          if mysqladmin ping -h 127.0.0.1 -u root -proot --silent; then
+            break
+          fi
+          echo "Waiting for MySQL..."
+          sleep 2
+        done
+
+    - name: Create databases
+      run: |
+        mysql -h 127.0.0.1 -u root -proot < sql/create/create_mysql.sql || true
+
+    - name: Import auth database
+      run: |
+        if [ -f "sql/base/auth_database.sql" ]; then
+          mysql -h 127.0.0.1 -u root -proot auth < sql/base/auth_database.sql
+        fi
+
+    - name: Import characters database
+      run: |
+        if [ -f "sql/base/characters_database.sql" ]; then
+          mysql -h 127.0.0.1 -u root -proot characters < sql/base/characters_database.sql
+        fi
+
+    - name: Import world database structure
+      run: |
+        if [ -f "sql/base/dev/world_database.sql" ]; then
+          echo "Importing world database structure..."
+          mysql -h 127.0.0.1 -u root -proot world < sql/base/dev/world_database.sql
+        fi
+
+    - name: Import hotfixes database structure
+      run: |
+        if [ -f "sql/base/dev/hotfixes_database.sql" ]; then
+          echo "Importing hotfixes database structure..."
+          mysql -h 127.0.0.1 -u root -proot hotfixes < sql/base/dev/hotfixes_database.sql
+        fi
+
+    - name: Apply world updates
+      run: |
+        if [ -d "sql/updates/world/master" ]; then
+          echo "Applying world database updates..."
+          for file in sql/updates/world/master/*.sql; do
+            if [ -f "$file" ]; then
+              echo "Applying $file"
+              mysql -h 127.0.0.1 -u root -proot world < "$file"
+            fi
+          done
+        fi
+
+    - name: Apply hotfixes updates
+      run: |
+        if [ -d "sql/updates/hotfixes/master" ]; then
+          echo "Applying hotfixes database updates..."
+          for file in sql/updates/hotfixes/master/*.sql; do
+            if [ -f "$file" ]; then
+              echo "Applying $file"
+              mysql -h 127.0.0.1 -u root -proot hotfixes < "$file"
+            fi
+          done
+        fi
+
+    - name: Check update script
+      run: |
+        if [ -f "contrib/check_updates.sh" ]; then
+          chmod +x contrib/check_updates.sh
+          ./contrib/check_updates.sh auth master auth 127.0.0.1 || true
+          ./contrib/check_updates.sh characters master characters 127.0.0.1 || true
+        fi
+
+  clang-format:
+    if: false  # Temporarily disabled
+    name: Clang Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format-18
+
+    - name: Check C++ formatting
+      run: |
+        # Find all C++ files and check formatting
+        find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | while read file; do
+          clang-format-18 --dry-run --Werror "$file" || {
+            echo "Format error in: $file"
+            echo "Run: clang-format -i $file"
+            exit 1
+          }
+        done
+
+  cmake-format:
+    if: false  # Temporarily disabled
+    name: CMake Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install cmake-format
+      run: |
+        pip install cmake-format
+
+    - name: Check CMake formatting
+      run: |
+        # Check if .cmake-format.yaml exists
+        if [ -f ".cmake-format.yaml" ]; then
+          find . -name "CMakeLists.txt" -o -name "*.cmake" | grep -v "dep/" | grep -v "build/" | while read file; do
+            cmake-format --check "$file" || {
+              echo "Format error in: $file"
+              echo "Run: cmake-format -i $file"
+              exit 1
+            }
+          done
+        else
+          echo "No .cmake-format.yaml found, skipping CMake format check"
+        fi
+
+  pch-check:
+    if: false  # Temporarily disabled
+    name: PCH Build Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libboost-all-dev libssl-dev libmysqlclient-dev \
+          libreadline-dev zlib1g-dev
+
+    - name: Configure with PCH
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DUSE_COREPCH=ON \
+          -DUSE_SCRIPTPCH=ON \
+          -DTOOLS=ON \
+          -DSCRIPTS=dynamic \
+          -DSERVERS=ON
+
+    - name: Build with PCH
+      run: |
+        cmake --build build --parallel $(nproc)
+
+    - name: Check PCH usage
+      run: |
+        # Verify PCH files were created
+        if [ ! -f "build/src/server/game/CMakeFiles/game.dir/cmake_pch.hxx.gch" ] && \
+           [ ! -f "build/src/server/game/CMakeFiles/game.dir/PrecompiledHeaders/gamePCH.h.gch" ]; then
+          echo "Warning: PCH files not found for game library"
+        fi

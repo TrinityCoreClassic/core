@@ -15,7 +15,10 @@ if(SERVERS OR TOOLS)
   add_subdirectory(zlib)
   add_subdirectory(g3dlite)
   add_subdirectory(recastnavigation)
-  add_subdirectory(fmt)
+  # Only add fmt subdirectory if it wasn't already found by Dependencies.cmake
+  if(NOT TARGET fmt::fmt AND NOT TARGET fmt)
+    add_subdirectory(fmt)
+  endif()
   add_subdirectory(SFMT)
   add_subdirectory(utf8cpp)
   add_subdirectory(valgrind)
@@ -31,7 +34,8 @@ if(SERVERS)
   add_subdirectory(gsoap)
   add_subdirectory(rapidjson)
   add_subdirectory(efsw)
-  add_subdirectory(protobuf)
+  # Protobuf is now always fetched via FetchContent in Dependencies.cmake
+  # No need to add subdirectory here
 endif()
 
 if(TOOLS)

@@ -94,10 +94,10 @@ private:
 
     const pb::FileDescriptor* file_;
 
-    pb::scoped_array<pb::scoped_ptr<pbcpp::MessageGenerator>> message_generators_;
-    pb::scoped_array<pb::scoped_ptr<pbcpp::EnumGenerator>> enum_generators_;
-    pb::scoped_array<pb::scoped_ptr<BnetServiceGenerator>> service_generators_;
-    pb::scoped_array<pb::scoped_ptr<pbcpp::ExtensionGenerator>> extension_generators_;
+    pb::scoped_array<pb::scoped_ptr<pbcpp::MessageGenerator> > message_generators_;
+    pb::scoped_array<pb::scoped_ptr<pbcpp::EnumGenerator> > enum_generators_;
+    pb::scoped_array<pb::scoped_ptr<BnetServiceGenerator> > service_generators_;
+    pb::scoped_array<pb::scoped_ptr<pbcpp::ExtensionGenerator> > extension_generators_;
 
     // E.g. if the package is foo.bar, package_parts_ is {"foo", "bar"}.
     std::vector<std::string> package_parts_;

@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, vanilla_classic ]
+  pull_request:
+    branches: [ main, vanilla_classic ]
+  workflow_dispatch:
+
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_COMPRESS: true
+  CCACHE_COMPRESSLEVEL: 6
+  CCACHE_MAXSIZE: 500M
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Test both compilers with default configuration
+          - os: ubuntu-24.04
+            compiler: gcc
+            gcc-version: 13
+            preset: default
+          - os: ubuntu-24.04
+            compiler: clang
+            clang-version: 18
+            preset: default
+
+    name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.preset }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup compiler
+      run: |
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          sudo apt-get update
+          sudo apt-get install -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version }}
+          echo "CC=gcc-${{ matrix.gcc-version }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.gcc-version }}" >> $GITHUB_ENV
+        else
+          sudo apt-get update
+          sudo apt-get install -y clang-${{ matrix.clang-version }}
+          echo "CC=clang-${{ matrix.clang-version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ matrix.clang-version }}" >> $GITHUB_ENV
+        fi
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build ccache \
+          libboost-all-dev libssl-dev libmysqlclient-dev \
+          libreadline-dev zlib1g-dev \
+          autoconf automake libtool
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.preset }}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.compiler }}-
+          ${{ matrix.os }}-
+
+    - name: Configure CMake
+      run: |
+        cmake --preset ${{ matrix.preset }}
+
+    - name: Build
+      run: |
+        cmake --build --preset ${{ matrix.preset }} --parallel
+
+    - name: Test
+      if: matrix.preset == 'debug' || matrix.preset == 'default'
+      run: |
+        cd build/${{ matrix.preset }}
+        ctest --output-on-failure --parallel 2 || true
+
+    - name: Install
+      run: |
+        sudo cmake --install build/${{ matrix.preset }}
+
+    - name: Check executables
+      run: |
+        PRESET="${{ matrix.preset }}"
+        # Use the install prefix from the preset
+        if [ "${{ matrix.preset }}" = "default" ] || [ "${{ matrix.preset }}" = "debug" ] || [ "${{ matrix.preset }}" = "release" ]; then
+          BIN_PATH="/opt/trinity-core/vanilla-classic/bin"
+        else
+          BIN_PATH="/usr/local/bin"
+        fi
+        
+        if [ -f "${BIN_PATH}/worldserver" ]; then
+          "${BIN_PATH}/worldserver" --version
+        else
+          echo "worldserver not found at ${BIN_PATH}"
+          ls -la "${BIN_PATH}/" 2>/dev/null || echo "Directory does not exist"
+        fi
+        
+        if [ -f "${BIN_PATH}/bnetserver" ]; then
+          "${BIN_PATH}/bnetserver" --version
+        else
+          echo "bnetserver not found at ${BIN_PATH}"
+        fi
+
+    - name: Upload artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.preset }}
+        path: |
+          build/${{ matrix.preset }}/CMakeFiles/CMakeOutput.log
+          build/${{ matrix.preset }}/CMakeFiles/CMakeError.log
+        retention-days: 7

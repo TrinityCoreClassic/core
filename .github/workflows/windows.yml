@@ -1,0 +1,170 @@
+name: Windows
+
+on:
+  push:
+    branches: [ main, vanilla_classic ]
+  pull_request:
+    branches: [ main, vanilla_classic ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [default]
+        
+    name: Windows-${{ matrix.preset }}
+    
+    env:
+      BOOST_ROOT: ${{ github.workspace }}\deps\boost
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Cache Boost
+      uses: actions/cache@v4
+      id: cache-boost
+      with:
+        path: ${{ env.BOOST_ROOT }}
+        key: ${{ runner.os }}-boost-1.83.0
+
+    - name: Download and Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        Write-Host "Downloading Boost..."
+        $Url = "https://archives.boost.io/release/1.83.0/source/boost_1_83_0.zip"
+        (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.zip")
+        Write-Host "Extracting Boost..."
+        New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\deps"
+        Expand-Archive -Path "$env:TEMP\boost.zip" -DestinationPath "${{ github.workspace }}\deps" -Force
+        if (Test-Path "${{ github.workspace }}\deps\boost_1_83_0") {
+          Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
+        }
+        
+        Write-Host "Building Boost libraries..."
+        cd "${{ github.workspace }}\deps\boost"
+        .\bootstrap.bat gcc
+        .\b2 --with-system --with-filesystem --with-program_options --with-locale --with-thread --with-regex --with-chrono --with-atomic toolset=gcc variant=release link=static runtime-link=shared threading=multi -j4
+
+    - name: Install dependencies with Chocolatey
+      run: |
+        # Install OpenSSL (try different package names)
+        choco install openssl.light -y --no-progress --ignore-checksums || `
+        choco install win32openssl -y --no-progress --ignore-checksums || `
+        Write-Host "Failed to install OpenSSL via Chocolatey"
+        
+        # Install MySQL
+        choco install mysql -y --no-progress --ignore-checksums || `
+        Write-Host "Failed to install MySQL via Chocolatey"
+        
+        # Set environment variables for common OpenSSL locations
+        $opensslPaths = @(
+          "C:\Program Files\OpenSSL-Win64",
+          "C:\Program Files\OpenSSL",
+          "C:\OpenSSL-Win64",
+          "C:\tools\OpenSSL"
+        )
+        
+        foreach ($path in $opensslPaths) {
+          if (Test-Path $path) {
+            echo "OPENSSL_ROOT_DIR=$path" >> $env:GITHUB_ENV
+            Write-Host "Found OpenSSL at: $path"
+            break
+          }
+        }
+        
+        # Set MySQL environment
+        if (Test-Path "C:\tools\mysql\current") {
+          echo "MySQL_ROOT=C:\tools\mysql\current" >> $env:GITHUB_ENV
+          echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
+        }
+
+
+    - name: Configure CMake
+      run: |
+        cmake --preset ${{ matrix.preset }}
+
+    - name: Build
+      run: |
+        cmake --build --preset ${{ matrix.preset }} --parallel
+
+    - name: Test
+      if: matrix.preset == 'debug'
+      run: |
+        cd build/${{ matrix.preset }}
+        ctest --output-on-failure --parallel 2
+
+    - name: Install
+      run: |
+        cmake --install build/${{ matrix.preset }}
+
+    - name: Check executables
+      shell: powershell
+      run: |
+        # Check default install location based on preset
+        if ("${{ matrix.preset }}" -eq "default" -or "${{ matrix.preset }}" -eq "debug" -or "${{ matrix.preset }}" -eq "release") {
+          $binPath = "C:\opt\trinity-core\vanilla-classic\bin"
+        } else {
+          $binPath = "C:\Program Files\TrinityCore\bin"
+        }
+        
+        if (Test-Path "$binPath\worldserver.exe") {
+          & "$binPath\worldserver.exe" --version
+        } else {
+          Write-Host "worldserver.exe not found at $binPath"
+          if (Test-Path $binPath) {
+            Get-ChildItem $binPath
+          } else {
+            Write-Host "Directory does not exist"
+          }
+        }
+        
+        if (Test-Path "$binPath\bnetserver.exe") {
+          & "$binPath\bnetserver.exe" --version
+        } else {
+          Write-Host "bnetserver.exe not found at $binPath"
+        }
+
+    - name: Create Release Package
+      if: matrix.preset == 'release' && github.event_name == 'push'
+      run: |
+        $installPath = "C:\opt\trinity-core\vanilla-classic"
+        $binPath = "$installPath\bin"
+        if (Test-Path $installPath) {
+          # Copy runtime dependencies
+          Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          Copy-Item "$env:MySQL_ROOT\lib\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          
+          # Create package with symbols
+          7z a "TrinityCore-Win64-release.zip" "$installPath\*"
+          
+          # Create package without symbols
+          Remove-Item "$binPath\*.pdb" -Force -ErrorAction SilentlyContinue
+          7z a "TrinityCore-Win64-release-NoSymbols.zip" "$installPath\*"
+        }
+
+    - name: Upload Release Artifacts
+      if: matrix.preset == 'release' && github.event_name == 'push'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-release-${{ matrix.preset }}
+        path: |
+          TrinityCore-Win64-*.zip
+        retention-days: 30
+
+    - name: Upload Build Logs on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build-logs-${{ matrix.preset }}
+        path: |
+          build/${{ matrix.preset }}/CMakeFiles/CMakeOutput.log
+          build/${{ matrix.preset }}/CMakeFiles/CMakeError.log
+        retention-days: 7

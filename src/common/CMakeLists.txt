@@ -64,7 +64,7 @@ target_link_libraries(common
   PUBLIC
     argon2
     boost
-    fmt
+    Trinity::fmt
     g3dlib
     Detour
     sfmt
