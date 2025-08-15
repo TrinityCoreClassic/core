@@ -476,18 +476,21 @@ function(trinity_find_threads)
   set(CMAKE_THREAD_PREFER_PTHREAD ON)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   
-  # macOS workaround for FindThreads
-  if(APPLE)
-    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-    set(CMAKE_HAVE_THREADS_LIBRARY 1)
-    set(CMAKE_USE_PTHREADS_INIT 1)
-    set(Threads_FOUND TRUE)
-  endif()
-  
   find_package(Threads REQUIRED)
   
+  # Create the Trinity::Threads alias
   if(NOT TARGET Trinity::Threads)
-    add_library(Trinity::Threads ALIAS Threads::Threads)
+    if(TARGET Threads::Threads)
+      add_library(Trinity::Threads ALIAS Threads::Threads)
+    else()
+      # Fallback for systems where Threads::Threads isn't created
+      add_library(Trinity::Threads INTERFACE IMPORTED)
+      if(CMAKE_THREAD_LIBS_INIT)
+        set_target_properties(Trinity::Threads PROPERTIES
+          INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}"
+        )
+      endif()
+    endif()
   endif()
 endfunction()
 
