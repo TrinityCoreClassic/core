@@ -12,13 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - preset: default
-            compiler: clang
-          - preset: debug
-            compiler: gcc
+        preset: [default, debug]
         
-    name: macOS-${{ matrix.preset }}-${{ matrix.compiler }}
+    name: macOS-${{ matrix.preset }}
 
     steps:
     - name: Checkout repository
@@ -32,15 +28,9 @@ jobs:
         brew install cmake ninja
         brew install boost mysql-client openssl@3 readline
         
-        # Install GCC if needed
-        if [ "${{ matrix.compiler }}" = "gcc" ]; then
-          brew install gcc@13
-          echo "CC=gcc-13" >> $GITHUB_ENV
-          echo "CXX=g++-13" >> $GITHUB_ENV
-        else
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
-        fi
+        # Use Clang (default on macOS)
+        echo "CC=clang" >> $GITHUB_ENV
+        echo "CXX=clang++" >> $GITHUB_ENV
         
         # Set OpenSSL path
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
