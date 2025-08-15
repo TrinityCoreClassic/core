@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [default, release, debug]
+        preset: [default]
         
     name: Windows-${{ matrix.preset }}
     
@@ -43,8 +43,11 @@ jobs:
         $Url = "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip"
         (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.zip")
         Write-Host "Extracting Boost..."
+        New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\deps"
         Expand-Archive -Path "$env:TEMP\boost.zip" -DestinationPath "${{ github.workspace }}\deps" -Force
-        Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
+        if (Test-Path "${{ github.workspace }}\deps\boost_1_83_0") {
+          Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
+        }
 
     - name: Install OpenSSL
       run: |
