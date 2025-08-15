@@ -51,12 +51,12 @@ jobs:
 
     - name: Install OpenSSL
       run: |
-        choco install openssl --version=3.1.4 -y --no-progress
+        choco install openssl -y --no-progress
         echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL" >> $env:GITHUB_ENV
 
     - name: Install MySQL
       run: |
-        choco install mysql --version=8.0.31 -y --no-progress
+        choco install mysql -y --no-progress
         echo "MYSQL_ROOT_DIR=C:\tools\mysql\current" >> $env:GITHUB_ENV
         echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
 
