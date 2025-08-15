@@ -471,23 +471,41 @@ function(trinity_find_catch2)
   include(Catch)
 endfunction()
 
+# Thread library - handle macOS CMake 4.x issue
+if(APPLE)
+  # Set threading variables before any find_package(Threads) calls
+  # This prevents issues with CMake 4.x on macOS
+  set(CMAKE_THREAD_LIBS_INIT "")
+  set(CMAKE_HAVE_THREADS_LIBRARY 1)
+  set(CMAKE_USE_WIN32_THREADS_INIT 0)
+  set(CMAKE_USE_PTHREADS_INIT 1)
+  set(CMAKE_HP_PTHREADS_INIT 0)
+  set(CMAKE_USE_SPROC_INIT 0)
+  set(THREADS_FOUND TRUE)
+  set(Threads_FOUND TRUE)
+  
+  # Create a fake Threads::Threads target to satisfy dependencies
+  if(NOT TARGET Threads::Threads)
+    add_library(Threads::Threads INTERFACE IMPORTED)
+    set_target_properties(Threads::Threads PROPERTIES
+      INTERFACE_COMPILE_OPTIONS "-pthread"
+    )
+  endif()
+  
+  message(STATUS "Pre-configured threading for macOS CMake 4.x compatibility")
+endif()
+
 # Thread library
 function(trinity_find_threads)
   set(CMAKE_THREAD_PREFER_PTHREAD ON)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   
-  # Handle macOS threading issues with CMake 4.x
+  # On macOS, we've already set up threading above
   if(APPLE)
-    # On macOS, we can use the system threading directly
-    # Create our target immediately without going through FindThreads
     if(NOT TARGET Trinity::Threads)
-      add_library(Trinity::Threads INTERFACE IMPORTED)
-      # macOS threading is built-in, no additional libraries needed
-      set_target_properties(Trinity::Threads PROPERTIES
-        INTERFACE_COMPILE_OPTIONS "-pthread"
-      )
+      add_library(Trinity::Threads ALIAS Threads::Threads)
     endif()
-    message(STATUS "Using built-in macOS threading support")
+    message(STATUS "Using pre-configured macOS threading support")
     return()
   endif()
   

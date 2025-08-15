@@ -48,22 +48,43 @@ jobs:
           Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
         }
 
-    - name: Setup vcpkg
-      uses: microsoft/setup-vcpkg@v1
-      with:
-        vcpkg-version: 'latest'
-    
-    - name: Install OpenSSL and MySQL via vcpkg
+    - name: Install dependencies with Chocolatey
       run: |
-        vcpkg install openssl:x64-windows mysql:x64-windows
-        echo "OPENSSL_ROOT_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows" >> $env:GITHUB_ENV
-        echo "MySQL_ROOT=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows" >> $env:GITHUB_ENV
-        echo "CMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+        # Install OpenSSL (try different package names)
+        choco install openssl.light -y --no-progress --ignore-checksums || `
+        choco install win32openssl -y --no-progress --ignore-checksums || `
+        Write-Host "Failed to install OpenSSL via Chocolatey"
+        
+        # Install MySQL
+        choco install mysql -y --no-progress --ignore-checksums || `
+        Write-Host "Failed to install MySQL via Chocolatey"
+        
+        # Set environment variables for common OpenSSL locations
+        $opensslPaths = @(
+          "C:\Program Files\OpenSSL-Win64",
+          "C:\Program Files\OpenSSL",
+          "C:\OpenSSL-Win64",
+          "C:\tools\OpenSSL"
+        )
+        
+        foreach ($path in $opensslPaths) {
+          if (Test-Path $path) {
+            echo "OPENSSL_ROOT_DIR=$path" >> $env:GITHUB_ENV
+            Write-Host "Found OpenSSL at: $path"
+            break
+          }
+        }
+        
+        # Set MySQL environment
+        if (Test-Path "C:\tools\mysql\current") {
+          echo "MySQL_ROOT=C:\tools\mysql\current" >> $env:GITHUB_ENV
+          echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
+        }
 
 
     - name: Configure CMake
       run: |
-        cmake --preset ${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE="$env:CMAKE_TOOLCHAIN_FILE"
+        cmake --preset ${{ matrix.preset }}
 
     - name: Build
       run: |
@@ -112,9 +133,9 @@ jobs:
         $installPath = "C:\opt\trinity-core\vanilla-classic"
         $binPath = "$installPath\bin"
         if (Test-Path $installPath) {
-          # Copy runtime dependencies from vcpkg
+          # Copy runtime dependencies
           Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
-          Copy-Item "$env:MySQL_ROOT\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          Copy-Item "$env:MySQL_ROOT\lib\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
           
           # Create package with symbols
           7z a "TrinityCore-Win64-release.zip" "$installPath\*"
