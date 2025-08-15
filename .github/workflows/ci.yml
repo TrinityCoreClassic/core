@@ -20,17 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu 22.04
-          - os: ubuntu-22.04
-            compiler: gcc
-            gcc-version: 11
-            preset: default
-          - os: ubuntu-22.04
-            compiler: clang
-            clang-version: 14
-            preset: default
-          
-          # Ubuntu 24.04
+          # Ubuntu 24.04 - Primary builds
           - os: ubuntu-24.04
             compiler: gcc
             gcc-version: 13
@@ -38,16 +28,20 @@ jobs:
           - os: ubuntu-24.04
             compiler: clang
             clang-version: 18
-            preset: debug
+            preset: default
           
-          # Special builds
+          # Ubuntu 24.04 - Additional configurations
+          - os: ubuntu-24.04
+            compiler: gcc
+            gcc-version: 13
+            preset: debug
           - os: ubuntu-24.04
             compiler: gcc
             gcc-version: 13
             preset: release
-          - os: ubuntu-22.04
-            compiler: gcc
-            gcc-version: 11
+          - os: ubuntu-24.04
+            compiler: clang
+            clang-version: 18
             preset: minimal
 
     name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.preset }}
