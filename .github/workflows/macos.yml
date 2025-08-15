@@ -27,6 +27,7 @@ jobs:
         brew update
         brew install cmake ninja
         brew install boost mysql-client openssl@3 readline
+        brew install autoconf automake libtool
         
         # Use Clang (default on macOS)
         echo "CC=clang" >> $GITHUB_ENV
@@ -54,7 +55,7 @@ jobs:
 
     - name: Install
       run: |
-        cmake --install build/${{ matrix.preset }}
+        sudo cmake --install build/${{ matrix.preset }}
 
     - name: Check executables
       run: |

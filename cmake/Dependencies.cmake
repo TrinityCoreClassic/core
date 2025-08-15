@@ -476,6 +476,22 @@ function(trinity_find_threads)
   set(CMAKE_THREAD_PREFER_PTHREAD ON)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   
+  # Handle macOS threading issues with CMake 4.x
+  if(APPLE)
+    # On macOS, we can use the system threading directly
+    # Create our target immediately without going through FindThreads
+    if(NOT TARGET Trinity::Threads)
+      add_library(Trinity::Threads INTERFACE IMPORTED)
+      # macOS threading is built-in, no additional libraries needed
+      set_target_properties(Trinity::Threads PROPERTIES
+        INTERFACE_COMPILE_OPTIONS "-pthread"
+      )
+    endif()
+    message(STATUS "Using built-in macOS threading support")
+    return()
+  endif()
+  
+  # For other platforms, use standard FindThreads
   find_package(Threads REQUIRED)
   
   # Create the Trinity::Threads alias

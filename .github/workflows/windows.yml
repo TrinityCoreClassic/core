@@ -18,7 +18,6 @@ jobs:
     
     env:
       BOOST_ROOT: ${{ github.workspace }}\deps\boost
-      OPENSSL_ROOT_DIR: C:\Program Files\OpenSSL
 
     steps:
     - name: Checkout repository
@@ -49,20 +48,22 @@ jobs:
           Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
         }
 
-    - name: Install OpenSSL
+    - name: Setup vcpkg
+      uses: microsoft/setup-vcpkg@v1
+      with:
+        vcpkg-version: 'latest'
+    
+    - name: Install OpenSSL and MySQL via vcpkg
       run: |
-        choco install openssl -y --no-progress
-        echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL" >> $env:GITHUB_ENV
+        vcpkg install openssl:x64-windows mysql:x64-windows
+        echo "OPENSSL_ROOT_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows" >> $env:GITHUB_ENV
+        echo "MySQL_ROOT=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows" >> $env:GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
 
-    - name: Install MySQL
-      run: |
-        choco install mysql -y --no-progress
-        echo "MYSQL_ROOT_DIR=C:\tools\mysql\current" >> $env:GITHUB_ENV
-        echo "C:\tools\mysql\current\bin" >> $env:GITHUB_PATH
 
     - name: Configure CMake
       run: |
-        cmake --preset ${{ matrix.preset }}
+        cmake --preset ${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE="$env:CMAKE_TOOLCHAIN_FILE"
 
     - name: Build
       run: |
@@ -111,9 +112,9 @@ jobs:
         $installPath = "C:\opt\trinity-core\vanilla-classic"
         $binPath = "$installPath\bin"
         if (Test-Path $installPath) {
-          # Copy runtime dependencies
-          Copy-Item "$env:MYSQL_ROOT_DIR\lib\libmysql.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          # Copy runtime dependencies from vcpkg
           Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
+          Copy-Item "$env:MySQL_ROOT\bin\*.dll" -Destination "$binPath\" -ErrorAction SilentlyContinue
           
           # Create package with symbols
           7z a "TrinityCore-Win64-release.zip" "$installPath\*"
