@@ -40,7 +40,7 @@ jobs:
       if: steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         Write-Host "Downloading Boost..."
-        $Url = "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip"
+        $Url = "https://archives.boost.io/release/1.83.0/source/boost_1_83_0.zip"
         (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.zip")
         Write-Host "Extracting Boost..."
         New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\deps"
