@@ -47,6 +47,11 @@ jobs:
         if (Test-Path "${{ github.workspace }}\deps\boost_1_83_0") {
           Rename-Item -Path "${{ github.workspace }}\deps\boost_1_83_0" -NewName "boost"
         }
+        
+        Write-Host "Building Boost libraries..."
+        cd "${{ github.workspace }}\deps\boost"
+        .\bootstrap.bat gcc
+        .\b2 --with-system --with-filesystem --with-program_options --with-locale --with-thread --with-regex --with-chrono --with-atomic toolset=gcc variant=release link=static runtime-link=shared threading=multi -j4
 
     - name: Install dependencies with Chocolatey
       run: |
