@@ -475,6 +475,15 @@ endfunction()
 function(trinity_find_threads)
   set(CMAKE_THREAD_PREFER_PTHREAD ON)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
+  
+  # macOS workaround for FindThreads
+  if(APPLE)
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(Threads_FOUND TRUE)
+  endif()
+  
   find_package(Threads REQUIRED)
   
   if(NOT TARGET Trinity::Threads)
