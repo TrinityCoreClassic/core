@@ -1,26 +1,26 @@
+# Add directories, files, and symbolic links which should not be stored within
+# the repository here.
 
-build*/
-.directory
-.mailmap
-*.orig
-*.rej
-*~
-.hg/
-*.kdev*
+# Helper files requiring special attention
+!.gitignore
+!.gitattributes
+
+# Project files
+/.cache/
+/.idea/
+/.vscode/
+
+# OS specific temporary files
 .DS_Store
-CMakeLists.txt.user
-*.bak
-*.patch
-*.diff
-*.REMOTE.*
-*.BACKUP.*
-*.BASE.*
-*.LOCAL.*
-nbproject/*
-.idea/*
-.browse.VC*
-.vscode
-cmake-build-*/
-.vs
-*.user
-*.pyc
+Thumbs.db
+
+# Generated files and folders
+/.cache/
+/.fleet/
+/build*/
+/install*/
+/cmake-build-*/
+/cmake-install-*/
+
+# Local overrides
+CMakeUserPresets.json

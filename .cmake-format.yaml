@@ -1,0 +1,138 @@
+# Format specification for cmake-format
+# https://cmake-format.readthedocs.io/
+
+# How wide to allow formatted cmake files
+line_width: 120
+
+# How many spaces to tab for indent
+tab_size: 2
+
+# Format command names with this case. Options are "lower", "upper", "unchanged"
+command_case: lower
+
+# Format keywords consistently as "lower" or "upper" case
+keyword_case: upper
+
+# Specify structure for custom cmake functions
+additional_commands:
+  trinity_add_library:
+    flags:
+      - STATIC
+      - SHARED
+      - INTERFACE
+      - OBJECT
+    kwargs:
+      ALIAS: 1
+      SOURCES: '*'
+      PUBLIC_HEADERS: '*'
+      PRIVATE_HEADERS: '*'
+      PUBLIC_DEPS: '*'
+      PRIVATE_DEPS: '*'
+      COMPILE_FEATURES: '*'
+      COMPILE_OPTIONS: '*'
+      
+  trinity_add_executable:
+    flags:
+      - WIN32
+      - MACOSX_BUNDLE
+    kwargs:
+      FOLDER: 1
+      OUTPUT_NAME: 1
+      SOURCES: '*'
+      PRIVATE_DEPS: '*'
+      COMPILE_FEATURES: '*'
+      COMPILE_OPTIONS: '*'
+      RUNTIME_OUTPUT_DIRECTORY: '*'
+      
+  trinity_add_dependency:
+    flags:
+      - REQUIRED
+      - QUIET
+    kwargs:
+      GIT_REPOSITORY: 1
+      GIT_TAG: 1
+      URL: 1
+      URL_HASH: 1
+      SYSTEM_PACKAGE: 1
+      FIND_PACKAGE_ARGS: '*'
+      CMAKE_ARGS: '*'
+      
+  trinity_configure_unity_build:
+    kwargs:
+      BATCH_SIZE: 1
+      
+  trinity_target_precompile_headers:
+    flags:
+      - REUSE
+    kwargs:
+      REUSE_FROM: 1
+      PRIVATE: '*'
+      PUBLIC: '*'
+      INTERFACE: '*'
+      
+  trinity_install_target:
+    flags:
+      - OPTIONAL
+    kwargs:
+      COMPONENT: 1
+      DESTINATION: 1
+      CONFIGURATIONS: '*'
+      
+  trinity_configure_warnings:
+    flags:
+      - WERROR
+    kwargs:
+      LEVEL: 1
+      
+  trinity_enable_sanitizers:
+    kwargs:
+      SANITIZERS: '*'
+
+# If true, separate flow control names from their parentheses with a space
+separate_ctrl_name_with_space: false
+
+# If true, separate function names from parentheses with a space
+separate_fn_name_with_space: false
+
+# If a statement is wrapped to more than one line, than dangle the closing parenthesis on its own line.
+dangle_parens: true
+
+# Do not sort argument lists.
+enable_sort: false
+
+# What style line endings to use in the output.
+line_ending: unix
+
+# Format comments
+format_comment:
+  # How many character to indent comment lines by
+  indent: 2
+  # What character to use for bulleted lists
+  bullet_char: '*'
+  # What character to use as punctuation after numerals in an enumerated list
+  enum_char: '.'
+  # enable comment markup parsing and reflow
+  enable_markup: true
+  # If comment markup is enabled, don't reflow the first comment block in each listfile.
+  first_comment_is_literal: true
+  # If comment markup is enabled, don't reflow any comment block which matches this regex
+  literal_comment_pattern: null
+  # Regular expression to match preformat fences in comments
+  fence_pattern: ^\s*([`~]{3}[`~]*)(.*)$
+  # Regular expression to match rulers in comments
+  ruler_pattern: ^\s*[^\w\s]{3}.*[^\w\s]{3}$
+  
+# Lint settings
+lint:
+  # Disable all linters
+  disabled_codes: ['*']
+  
+# A list of command names which should always be wrapped
+always_wrap:
+  - add_library
+  - add_executable
+  - target_link_libraries
+  - target_compile_options
+  - target_compile_definitions
+  - target_include_directories
+  - install

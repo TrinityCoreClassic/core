@@ -8,6 +8,47 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+# Optional protobuf generation
+if(WITH_PROTO_GENERATION)
+  # Find protoc-gen-bnet plugin
+  find_program(PROTOC_GEN_BNET protoc-gen-bnet
+    PATHS
+      ${CMAKE_SOURCE_DIR}/contrib/protoc-bnet/bin
+      ${CMAKE_BINARY_DIR}/contrib/protoc-bnet
+      /usr/local/bin
+      /usr/bin
+  )
+  
+  if(NOT PROTOC_GEN_BNET)
+    message(FATAL_ERROR "protoc-gen-bnet not found. Build it from contrib/protoc-bnet or disable WITH_PROTO_GENERATION")
+  endif()
+  
+  # Find all .proto files
+  file(GLOB_RECURSE PROTO_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.proto)
+  
+  # Generate protobuf files
+  foreach(PROTO_FILE ${PROTO_FILES})
+    get_filename_component(PROTO_DIR ${PROTO_FILE} DIRECTORY)
+    get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
+    
+    # Run protoc with the bnet plugin
+    execute_process(
+      COMMAND ${Protobuf_PROTOC_EXECUTABLE}
+        --plugin=protoc-gen-bnet=${PROTOC_GEN_BNET}
+        --bnet_out=dllexport_decl=TC_PROTO_API:${PROTO_DIR}
+        -I${CMAKE_CURRENT_SOURCE_DIR}
+        ${PROTO_FILE}
+      RESULT_VARIABLE PROTO_RESULT
+    )
+    
+    if(NOT PROTO_RESULT EQUAL 0)
+      message(WARNING "Failed to generate protobuf files for ${PROTO_FILE}")
+    endif()
+  endforeach()
+  
+  message(STATUS "Protobuf files regenerated")
+endif()
+
 CollectSourceFiles(
   ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE_SOURCES
@@ -46,7 +87,7 @@ target_link_libraries(proto
     trinity-no-warning-interface
   PUBLIC
     common
-    protobuf)
+    Trinity::Protobuf)
 
 set_target_properties(proto
   PROPERTIES

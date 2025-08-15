@@ -1,0 +1,17 @@
+[Unit]
+Description=TrinityCore bnetserver
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=trinity
+Group=trinity
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/bnetserver
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+WorkingDirectory=@CMAKE_INSTALL_PREFIX@
+
+[Install]
+WantedBy=multi-user.target

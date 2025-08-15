@@ -1,0 +1,120 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "vendor": {
+    "example.com/TrinityCore/User": {
+      "autoFormat": false
+    }
+  },
+  "configurePresets": [
+    {
+      "name": "my-dev",
+      "displayName": "My Development Build",
+      "description": "Personal development configuration",
+      "inherits": "dev",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "$env{HOME}/trinity-dev",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_FLAGS": "-march=native",
+        "CMAKE_C_FLAGS": "-march=native"
+      },
+      "environment": {
+        "CCACHE_DIR": "$env{HOME}/.ccache",
+        "CCACHE_MAXSIZE": "10G"
+      }
+    },
+    {
+      "name": "my-local",
+      "displayName": "Local Testing",
+      "description": "Local testing with custom paths",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "$env{HOME}/trinity-local",
+        "CONF_DIR": "$env{HOME}/trinity-local/etc"
+      }
+    },
+    {
+      "name": "my-debug-vscode",
+      "displayName": "VSCode Debug",
+      "description": "Debug configuration optimized for VSCode",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "-g3 -O0",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/vscode-debug"
+      }
+    },
+    {
+      "name": "my-clang",
+      "displayName": "Clang Build",
+      "description": "Build with Clang compiler",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++",
+        "CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++"
+      }
+    },
+    {
+      "name": "my-coverage",
+      "displayName": "Code Coverage",
+      "description": "Build with code coverage enabled",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fprofile-arcs -ftest-coverage",
+        "CMAKE_C_FLAGS": "-fprofile-arcs -ftest-coverage",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-arcs -ftest-coverage",
+        "BUILD_TESTING": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "my-dev",
+      "configurePreset": "my-dev",
+      "jobs": 8
+    },
+    {
+      "name": "my-dev-clean",
+      "inherits": "my-dev",
+      "cleanFirst": true
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "my-dev",
+      "configurePreset": "my-dev",
+      "output": {
+        "verbosity": "verbose"
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "my-daily",
+      "displayName": "My Daily Build",
+      "description": "My daily development workflow",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "my-dev"
+        },
+        {
+          "type": "build",
+          "name": "my-dev"
+        },
+        {
+          "type": "test",
+          "name": "my-dev"
+        }
+      ]
+    }
+  ]
+}

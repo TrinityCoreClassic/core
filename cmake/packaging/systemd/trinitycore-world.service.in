@@ -1,0 +1,17 @@
+[Unit]
+Description=TrinityCore world server
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=trinity
+Group=trinity
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/worldserver
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+WorkingDirectory=@CMAKE_INSTALL_PREFIX@
+
+[Install]
+WantedBy=multi-user.target
